@@ -4,6 +4,18 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    #! format: off
+    return quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+    #! format: on
+end
+
 # ╔═╡ 49799ef0-ba51-11f0-28de-b37bf41e41e8
 begin
 	using Pkg
@@ -12,6 +24,9 @@ end
 
 # ╔═╡ 8969a0b2-50f7-4573-9c63-40dcf7ef773e
 using LinearAlgebra, Plots
+
+# ╔═╡ 287f599c-0932-4d5c-ae28-16c6488d585a
+using FileIO, PlutoUI
 
 # ╔═╡ ffc4fe26-29ab-405c-abb4-441945e251f0
 html"""
@@ -30,9 +45,9 @@ html"""
 ## Constantes
 
 begin
-	μ=3.986004418e14 	# Paramètre gravitationnel terrestre
-	Re=6371e3 			# Rayon moyen de la Terre
-	ωe=7.2921150e-5 	# Vitesse de rotation de la Terre (considérée constante)
+	const μ = 3.986004418e14 	# Paramètre gravitationnel terrestre
+	const Re = 6371e3 			# Rayon moyen de la Terre
+	const ωe = 7.2921150e-5 	# Vitesse de rotation de la Terre (considérée constante)
 
 	nothing
 end
@@ -44,7 +59,7 @@ struct Sat
     a::Float64   # Demi-grand axe (m) → distance moyenne au centre de la Terre
     i::Float64   # Inclinaison orbitale (rad) → angle entre le plan orbital et l’équateur
     Ω::Float64   # Longitude du nœud ascendant (rad) → orientation du plan orbital autour de la Terre
-    M0::Float64  # Anomalie moyenne initiale (rad) → position initiale du satellite sur son orbite
+    M0::Float64  # Anomalie moyenne initiale (rad) → position du satellite sur son orbite
 end
 
 
@@ -105,7 +120,7 @@ end
 
 # ╔═╡ 48c2baeb-e62a-44a7-87d0-148705574470
 """
-Génère une constellation de type Walker-Delta.\n
+Initialise une constellation de type Walker-Delta.\n
 Utilisée pour répartir uniformément des satellites sur plusieurs plans orbitaux inclinés.
 """
 function walker_delta(P, S, F, i_deg, a)
@@ -172,22 +187,26 @@ end
 """
 Affiche les zones couvertes par les satellites
 """
-function show_coverage_heatmap!(sats, t, latmin, latmax, eps_deg; dlat=1, dlon=1)
-    lats = collect(latmin:dlat:latmax)
+function show_coverage_heatmap(sats, t, eps_deg; dlat=1, dlon=1)
+    lats = collect(-90:dlat:90)
     lons = collect(-180:dlon:180)
-    r_ecef = [ecef_from_eci(eci_pos(s, t), t) for s in sats] # Position des satellites à l'instant t
+    r_ecef = [ecef_from_eci(eci_pos(s, t), t) for s in sats]
 
     M = falses(length(lats), length(lons))
 
     for (i, lat) in enumerate(lats), (j, lon) in enumerate(lons)
         M[i, j] = any(r -> visible(r, lat, lon, eps_deg), r_ecef)
     end
-    heatmap(lons, lats, Int.(M); aspect_ratio=1, colorbar=:false, ticks=:false, axis=:false)
+	p = heatmap(lons, lats, Int.(M))
+	p = plot!(p, xlabel = "Longitude [°]", ylabel = "Latitude [°]", title = "Zones couvertes par $(length(sats)) satellites")
+	
+    return plot!(p, aspect_ratio=1, colorbar=false, framestyle=:none)
 end
+
 
 # ╔═╡ 4d1173b5-3158-4535-abdd-14da09801f09
 """
-Plot la Terre, les latitudes ±60°, et les positions instantanées des satellites en 3D.
+Plot la Terre et les positions instantanées des satellites en 3D.
 """
 function plot_constellation!(sats, t; Rearth = Re)	
 	# Hémisphère arrière de la Terre (longitudes ~ [-π, 0])
@@ -216,41 +235,82 @@ function plot_constellation!(sats, t; Rearth = Re)
     X = [r[1] for r in r_ecef]
     Y = [r[2] for r in r_ecef]
     Z = [r[3] for r in r_ecef]
-    p = scatter3d!(p, X, Y, Z, marker=:circle, ms=3.5, color=:orange, aspect_ratio=:equal, legend=false, colorbar=false, size=(600,600)) # Plot des satellites
+    p = scatter3d!(p, X, Y, Z, marker=:circle, ms=3.5, color=:orange, title="Visualisation des satellites en t = $(Int(t))s") # Plot des satellites
 
-	return p
+	return plot!(p, aspect_ratio=:equal, legend=false, colorbar=false, size=(600,600), framestyle=:none, ticks=:none)
 end
 
 # ╔═╡ 6730fbd6-2cdd-4f88-a00c-182a601e6d97
 ## Paramètres
 
 begin
-	h_km=500.0 			# Altitude des satellites
+	h_km=800.0 			# Altitude des satellites
 	eps_deg=10 			# Elevation minimale
 	i_deg=60.0 			# Inclinaison orbitale (angle avec l'équateur) pour savoir les lattitudes couvertes
 	P=3 				# Nombre de plans orbitaux
-	S=3 				# Nombre de satellites par plan
+	S=7 				# Nombre de satellites par plan
 	F=0 				# Facteur de déphasage (pour décaler la position des satellites entre les plans afin d'éviter qu'ils soient alignés)
 	a=Re + h_km*1e3 	# Demi-grand axe pour calculer la période orbitale
 	t=0.0 				# Temps en secondes
 
-	nothing
+	sats=walker_delta(P,S,F,i_deg,a)
 end
 
-# ╔═╡ bfa07a7f-842b-4ea1-9cfb-ff902d694492
-sats=walker_delta(P,S,F,i_deg,a)
-
-# ╔═╡ 74249c3d-41d6-40dc-9f76-cc97d5df7ea0
-cov = coverage_fraction(sats, t, -i_deg, i_deg, eps_deg; dlat=2, dlon=2)
-
 # ╔═╡ 1332fe9d-cd3d-4c04-9009-42d2b80ddfb1
-println("Couverture ±60° instantanée (ε=$(eps_deg)°) : $(round(cov*100,digits=2))% avec $(length(sats)) satellites.")
+println("Couverture ±$(i_deg)° instantanée (ε=$(eps_deg)°) : $(round(coverage_fraction(sats, t, -i_deg, i_deg, eps_deg)*100,digits=2))% avec $P fois $S satellites.")
 
 # ╔═╡ 27790501-c853-4b7d-9fdc-ab78585745fa
-show_coverage_heatmap!(sats, t, -i_deg, i_deg, 0; dlat=1, dlon=1)
+begin
+	p1 = show_coverage_heatmap(sats, t, 0)
+	p2 = plot_constellation!(sats,t)
+	plot(p1, p2; layout=(1,2), size=(1300,600))
+end
 
-# ╔═╡ 171b6ed2-7180-4299-a6dc-12010c4c65c4
-plot_constellation!(sats,t)
+# ╔═╡ e67f0e51-c074-4ed6-b38a-fd4afbdaa9be
+# r_ecef = [ecef_from_eci(eci_pos(s, t), t) for s in sats]
+
+# ╔═╡ d97c7a1e-5929-4d50-aa6e-c1b029be1861
+begin
+	Ts = 0:100:12000
+	covs = [coverage_fraction(sats, T, -90, 90, eps_deg)*100 for T in Ts]
+	
+	plot(Ts, round.(covs; digits=2),
+	    xlabel = "Temps (s)",
+	    ylabel = "Couverture (%)",
+	    legend = false,
+	    title = "Évolution de la couverture",
+	    markersize = 3,
+	    color = :blue)
+end
+
+# ╔═╡ fae330d2-7fd6-4887-b855-20109d19bde7
+# Pour faire des GIFs sur CDN :)
+if !isfile("./test.gif") # Pour éviter que ça se relance à chaque fois 
+    folder = mktempdir()
+	Tmax = 10000
+	step = 100
+    for t in 0:step:Tmax
+        p1 = show_coverage_heatmap(sats, t, 0)
+		p2 = plot_constellation!(sats,t)
+		plot(p1, p2; layout=(1,2), size=(1300,600))
+        savefig(joinpath(folder, "frame_$(Int(t/step)).png"))
+    end
+	
+    frames_ = [load(joinpath(folder, "frame_$i.png")) for i in 0:Int(Tmax/step)]
+    gr()
+    save("./test.gif", cat(frames_..., dims=3))
+end
+
+# ╔═╡ 89b95e5c-684c-44ca-9455-469e3bb97129
+md"""
+Click here to reload the GIF : $(@bind reload Button("Reload"))
+"""
+
+# ╔═╡ 8926723b-d835-4818-9073-89eea4b0dea4
+begin
+	reload
+	PlutoUI.LocalResource("./test.gif")
+end
 
 # ╔═╡ Cell order:
 # ╟─ffc4fe26-29ab-405c-abb4-441945e251f0
@@ -269,8 +329,11 @@ plot_constellation!(sats,t)
 # ╟─4899cb2f-04a9-40a6-9f56-0a63a8a37db3
 # ╟─4d1173b5-3158-4535-abdd-14da09801f09
 # ╠═6730fbd6-2cdd-4f88-a00c-182a601e6d97
-# ╠═bfa07a7f-842b-4ea1-9cfb-ff902d694492
-# ╠═74249c3d-41d6-40dc-9f76-cc97d5df7ea0
-# ╠═1332fe9d-cd3d-4c04-9009-42d2b80ddfb1
-# ╠═27790501-c853-4b7d-9fdc-ab78585745fa
-# ╠═171b6ed2-7180-4299-a6dc-12010c4c65c4
+# ╟─1332fe9d-cd3d-4c04-9009-42d2b80ddfb1
+# ╟─27790501-c853-4b7d-9fdc-ab78585745fa
+# ╠═e67f0e51-c074-4ed6-b38a-fd4afbdaa9be
+# ╠═d97c7a1e-5929-4d50-aa6e-c1b029be1861
+# ╠═287f599c-0932-4d5c-ae28-16c6488d585a
+# ╠═fae330d2-7fd6-4887-b855-20109d19bde7
+# ╟─89b95e5c-684c-44ca-9455-469e3bb97129
+# ╟─8926723b-d835-4818-9073-89eea4b0dea4
