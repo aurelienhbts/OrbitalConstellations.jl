@@ -20,15 +20,16 @@ Primary Julia packages required:
 
 ## 🛰️ Example Usage (LEO Constellations)
 ```julia
-using .SatsLEO
+using .SatsLEO             # Import the local SatsLEO module (must be in the same project)
 
-P, S, F = 4, 12, 1
-i_deg = 50
-h_km = 800
-a = Re + h_km*1e3
+P, S, F = 4, 12, 1         # Walker-Delta parameters: P = number of planes, S = sats per plane, F = phasing
+i_deg = 50                 # Orbital inclination (degrees)
+h_km = 800                 # Altitude above Earth (km)
+a = Re + h_km * 1e3        # Semi-major axis = Earth radius + altitude
 
-sats = walker_delta(P, S, F, i_deg, a)
-mean_coverage_fraction(sats, -i_deg, i_deg, 10)
+sats = walker_delta(P, S, F, i_deg, a)        # Construct the Walker constellation (myconstellation also available)
+mean_coverage_fraction(sats, -i_deg, i_deg, 10)   # Compute mean coverage between ±inclination with 10° elevation mask
+
 ```
 
 ## 📜 License
