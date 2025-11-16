@@ -133,14 +133,14 @@ begin
 end
 
 # ╔═╡ f8f4c11b-b506-45df-b6b4-50abbe999c64
-PlutoUI.LocalResource("./coverage_fraction_période.png")
+PlutoUI.LocalResource("./Figures/coverage_fraction_période.png")
 
 # ╔═╡ 5b53534e-2155-4675-a271-454b92e3c96e
-PlutoUI.LocalResource("./convergence_mean_coverage.png")
+PlutoUI.LocalResource("./Figures/convergence_mean_coverage.png")
 
 # ╔═╡ 84ff8c5f-5c92-4336-acb4-cd643d3e56e6
 # Pour faire des GIFs sur CDN :)
-if !isfile("./cov.gif") #!isfile("./sats.gif")
+if !isfile("./Figures/cov.gif") #!isfile("./Figures/sats.gif")
     folder = mktempdir()
 	Tmax = 10000
 	step = 100
@@ -152,8 +152,8 @@ if !isfile("./cov.gif") #!isfile("./sats.gif")
 	
     frames = [load(joinpath(folder, "frame_$i.png")) for i in 0:Int(Tmax/step)]
     gr()
-    save("./cov.gif", cat(frames..., dims=3))
-	#save("./sats.gif", cat(frames_..., dims=3))
+    save("./Figures/cov.gif", cat(frames..., dims=3))
+	#save("./Figures/sats.gif", cat(frames_..., dims=3))
 end
 
 # ╔═╡ 89b95e5c-684c-44ca-9455-469e3bb97129
@@ -164,13 +164,13 @@ Click here to reload the GIF : $(@bind reload Button("Reload"))
 # ╔═╡ 8926723b-d835-4818-9073-89eea4b0dea4
 begin
 	reload
-	PlutoUI.LocalResource("./sats.gif")
+	#PlutoUI.LocalResource("./Figures/sats.gif")
 end
 
 # ╔═╡ b2388c97-997d-4afd-a681-2b86b7c1458a
 begin
 	reload
-	PlutoUI.LocalResource("./cov.gif")
+	#PlutoUI.LocalResource("./Figures/cov.gif")
 end
 
 # ╔═╡ Cell order:
