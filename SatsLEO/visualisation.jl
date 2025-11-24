@@ -1,9 +1,21 @@
 using LinearAlgebra, Plots
 
 """
-show_coverage_heatmap(sats,t,eps_deg)
+show_coverage_heatmap(sats, t, eps_deg)
 
-Affiche les zones couvertes par les satellites. Tient compte de l'élévation minimale nécessaire pour voir les satellites depuis le sol.
+Affiche sous forme de carte thermique les zones de la Terre couvertes par la
+constellation de satellites à l'instant t.  
+La visibilité est déterminée en tenant compte de l'angle d'élévation minimal
+`eps_deg`, ce qui permet d'identifier les régions réellement desservies.
+
+Arguments
+- sats     : Liste des satellites constituant la constellation.
+- t        : Instant d'évaluation (en secondes) dans le repère inertiel.
+- eps_deg  : Angle d'élévation minimal (en degrés) pour considérer un satellite visible.
+
+Valeur retournée
+- Une figure affichant les zones couvertes (couleur = 1) et non couvertes (couleur = 0)
+  sur une grille latitude/longitude couvrant toute la Terre.
 """
 function show_coverage_heatmap(sats,t,eps_deg)
     lats = collect(-90:1:90)
@@ -22,9 +34,18 @@ function show_coverage_heatmap(sats,t,eps_deg)
 end
 
 """
-plot_earth(;Rearth=Re)
+plot_earth(; Rearth=Re)
 
-Plot une sphère (la Terre) avec des lignes pour les lattitudes et l'équateur en bleu.
+Trace une représentation 3D de la Terre sous forme de sphère, avec une transparence
+légère et des lignes de latitude.  
+L'équateur est affiché en bleu pour le distinguer visuellement des autres latitudes.
+
+Arguments optionnels
+- Rearth : Rayon de la Terre utilisé pour la visualisation (par défaut `Re` défini dans le module).
+
+Valeur retournée
+- Une figure 3D représentant la Terre, prête à être utilisée comme base
+  pour y superposer des orbites, des satellites ou des éléments de constellation.
 """
 function plot_earth(;Rearth=Re)
 	# Hémisphère arrière de la Terre (longitudes ~ [-π, 0])
@@ -77,9 +98,20 @@ function plot_earth(;Rearth=Re)
 end
 
 """
-plot_constellation(sats,t;Rearth=Re)
+plot_constellation(sats, t; Rearth=Re)
 
-Plot les positions instantanées des satellites en 3D autour de la Terre.
+Affiche en 3D la position instantanée des satellites autour de la Terre,
+ainsi que leurs plans orbitaux.  
+La Terre est tracée en arrière-plan via `plot_earth()`.
+
+Arguments
+- sats     : Liste de satellites constituant la constellation.
+- t        : Instant d'évaluation (en secondes) dans le repère inertiel.
+- Rearth   : Rayon utilisé pour le tracé de la Terre (par défaut `Re`).
+
+Valeur retournée
+- Une figure 3D montrant la Terre, les orbites projetées et les positions
+  instantanées des satellites à l'instant `t`.
 """
 function plot_constellation(sats,t;Rearth=Re)
 	p = plot_earth()

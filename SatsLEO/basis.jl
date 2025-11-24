@@ -5,26 +5,107 @@ const μ = 3.986004418e14 	# Paramètre gravitationnel terrestre (m³/s²)
 const Re = 6.371e6 		    # Rayon moyen de la Terre (m)
 const ωe = 7.2921150e-5 	# Vitesse de rotation de la Terre (rad/s)
 
-## Structure pour stocker les satellites (définis par a, i, Ω et M0).
+"""
+Sat
+
+Structure représentant un satellite sur une orbite (supposée circulaire) autour de la Terre,
+définie par ses éléments orbitaux principaux : demi-grand axe, inclinaison, longitude du
+nœud ascendant et anomalie moyenne initiale.
+
+Champs
+- a  : Demi-grand axe (m), distance moyenne au centre de la Terre.
+- i  : Inclinaison orbitale (rad), angle entre le plan orbital et le plan équatorial.
+- Ω  : Longitude du nœud ascendant (rad), orientation du plan orbital autour de l'axe de rotation terrestre.
+- M0 : Anomalie moyenne initiale (rad), position du satellite sur son orbite à l'instant de référence.
+"""
 struct Sat
-    a::Float64   # Demi-grand axe (m) → distance moyenne au centre de la Terre
-    i::Float64   # Inclinaison orbitale (rad) → angle entre le plan orbital et l'équateur
-    Ω::Float64   # Longitude du nœud ascendant (rad) → orientation du plan orbital autour de la Terre
-    M0::Float64  # Anomalie moyenne initiale (rad) → position du satellite sur son orbite
+    a::Float64
+    i::Float64
+    Ω::Float64
+    M0::Float64
 end
 
-## deg2rad et rad2deg functions
-deg2rad(x)=x*pi/180
-rad2deg(x)=180*x/pi
+"""
+deg2rad(x)
 
-## Matrices de rotation
-R1(θ)=[1 0 0; 0 cos(θ) -sin(θ); 0 sin(θ) cos(θ)] # Autour de l'axe X → Sert pour incliner le plan orbital d'un angle i (l'inclinaison).
-R3(θ)=[cos(θ) -sin(θ) 0; sin(θ) cos(θ) 0; 0 0 1] # Autour de l'axe Z → Sert pour tourner le plan orbital d'un angle Ω (ascension du nœud) ou de l'anomalie vraie ν.
+Convertit un angle en degrés vers des radians.
+
+Argument
+- x : Angle en degrés.
+
+Valeur retournée
+- L'angle correspondant en radians.
+"""
+deg2rad(x) = x * π / 180
+
 
 """
-ecef_from_eci(r,t)
+rad2deg(x)
 
-Convertit un vecteur de position d’un satellite du repère ECI (Earth-Centered Inertial) vers le repère ECEF (Earth-Centered Earth-Fixed).
+Convertit un angle en radians vers des degrés.
+
+Argument
+- x : Angle en radians.
+
+Valeur retournée
+- L'angle correspondant en degrés.
+"""
+rad2deg(x) = 180 * x / pi
+
+"""
+R1(θ)
+
+Matrice de rotation autour de l'axe X d'un angle `θ` (en radians).
+
+Utilisation :
+- Rotation d'inclinaison d'un plan orbital (angle `i`).
+
+Argument
+- θ : Angle de rotation en radians.
+
+Valeur retournée
+- Matrice 3x3 représentant la rotation autour de l'axe X.
+"""
+R1(θ) = [1 0 0;
+         0 cos(θ) -sin(θ);
+         0 sin(θ)  cos(θ)]
+
+
+"""
+R3(θ)
+
+Matrice de rotation autour de l'axe Z d'un angle `θ` (en radians).
+
+Utilisation :
+- Rotation selon l'ascension du nœud ascendant (Ω).
+- Rotation selon l'anomalie vraie (ν).
+- Rotation horaire du repère dans les conversions ECI/ECEF.
+
+Argument
+- θ : Angle de rotation en radians.
+
+Valeur retournée
+- Matrice 3x3 représentant la rotation autour de l'axe Z.
+"""
+R3(θ) = [ cos(θ) -sin(θ) 0;
+          sin(θ)  cos(θ) 0;
+               0       0 1]
+
+
+"""
+ecef_from_eci(r, t)
+
+Convertit un vecteur de position d'un satellite du repère inertiel ECI
+(Earth-Centered Inertial) vers le repère tournant ECEF (Earth-Centered Earth-Fixed).  
+La transformation applique une rotation autour de l'axe Z d'un angle égal
+à la rotation terrestre sur l'intervalle de temps `t`.
+
+Arguments
+- r : Vecteur position du satellite dans le repère ECI.
+- t : Temps écoulé (en secondes) depuis l'instant de référence.
+
+Valeur retournée
+- Vecteur position transformé dans le repère ECEF.
 """
 function ecef_from_eci(r,t)
 	return R3(-ωe*t)*r # page 129 - SE216 (v.Aout 2024)
@@ -33,7 +114,19 @@ end
 """
 latlon_from_ecef(r)
 
-Convertit un vecteur position exprimé dans le repère ECEF (Earth-Centered Earth-Fixed) en latitude et longitude (degrés).
+Convertit un vecteur position exprimé dans le repère ECEF (Earth-Centered Earth-Fixed)
+en coordonnées géographiques latitude-longitude, exprimées en degrés.
+
+Arguments
+- r : Vecteur position (x, y, z) en coordonnées ECEF.
+
+Comportement
+- La latitude est obtenue via l'angle entre le vecteur position et le plan équatorial.
+- La longitude est l'angle dans le plan équatorial entre l'axe X (méridien de Greenwich)
+  et la projection du vecteur sur ce plan.
+
+Valeurs retournées
+- (latitude_deg, longitude_deg) : Latitude et longitude en degrés.
 """
 function latlon_from_ecef(r)
     x, y, z = r # Vecteur position
@@ -46,9 +139,27 @@ function latlon_from_ecef(r)
 end
 
 """
-eci_pos(sat,t)
+eci_pos(sat, t; mu=μ)
 
-Calcule la position d’un satellite dans le repère inertiel (ECI) à un instant t, en supposant une orbite circulaire.
+Calcule la position d'un satellite dans le repère inertiel ECI (Earth-Centered Inertial)
+à l'instant `t`, en supposant une orbite circulaire.
+
+Arguments
+- sat : Structure décrivant le satellite (doit contenir a, i, Ω, M0).
+- t   : Temps écoulé (en secondes) depuis l'instant de référence.
+- mu  : Paramètre gravitationnel (par défaut `μ`).
+
+Comportement
+- Le mouvement orbital est supposé circulaire.
+- L'anomalie moyenne évolue selon `M(t) = M0 + n*t`.
+- La position inertielle est obtenue en appliquant successivement :
+    1) une rotation d'ascension du nœud Ω,
+    2) une rotation d'inclinaison i,
+    3) une rotation d'anomalie u,
+  au vecteur `[a, 0, 0]` situé sur l'orbite circulaire.
+
+Valeur retournée
+- Vecteur position du satellite dans le repère ECI.
 """
 function eci_pos(sat,t;mu=μ)
     n = sqrt(mu / sat.a^3) 			    # Vitesse angulaire du satellite d'après la 3e loi de Kepler
@@ -58,9 +169,29 @@ function eci_pos(sat,t;mu=μ)
 end
 
 """
-walker_delta(P,S,F,i_deg,a)
+walker_delta(P, S, F, i_deg, a)
 
-Initialise une constellation de type Walker-Delta. Utilisée pour répartir uniformément des satellites sur plusieurs plans orbitaux inclinés.
+Construit une constellation de type Walker-Delta, répartissant uniformément
+les satellites sur P plans orbitaux inclinés, avec S satellites par plan et
+un phasage défini par F.
+
+Arguments
+- P      : Nombre total de plans orbitaux.
+- S      : Nombre de satellites par plan orbital.
+- F      : Facteur de déphasage entre les plans (Walker phasing).
+- i_deg  : Inclinaison orbitale (en degrés).
+- a      : Demi-grand axe de l'orbite (en mètres).
+
+Comportement
+- Les plans orbitaux sont espacés uniformément en ascension du nœud,
+  suivant Ω = 2π·p / P.
+- Les satellites sont répartis uniformément dans chaque plan via s/S.
+- Le paramètre F introduit un déphasage supplémentaire entre les plans
+  afin d'éviter l'alignement vertical des satellites (offset typique Walker).
+
+Valeur retournée
+- Un vecteur de structures `Sat`, chacune définie par ses paramètres
+  orbitaux (a, i, Ω, M0).
 """
 function walker_delta(P,S,F,i_deg,a)
     sats = Sat[]
@@ -77,9 +208,31 @@ function walker_delta(P,S,F,i_deg,a)
 end
 
 """
-myconstellation(vec,i_deg,a)
+myconstellation(vec, F, i_deg, a)
 
-Initialise une constellation de type Walker-delta mais avec plus de flexibilité. vec est un vecteur comportant le nombre de satellite par plan orbital.
+Construit une constellation de type Walker-Delta **généralisée**, où le nombre
+de satellites par plan orbital est défini par le vecteur `vec`.  
+Cela permet une plus grande flexibilité que la version classique
+`walker_delta(P, S, F, i_deg, a)`.
+
+Arguments
+- vec    : Vecteur de longueur P, où `vec[p]` représente le nombre de satellites
+           dans le plan orbital p.
+- F      : Paramètre de phasage (Walker phasing) appliqué entre les plans.
+- i_deg  : Inclinaison orbitale en degrés.
+- a      : Demi-grand axe de l'orbite (en mètres).
+
+Comportement
+- Les plans sont répartis uniformément autour de l'axe z, avec :
+      Ω = 2π · p / P
+  pour p = 1, …, P.
+- Chaque plan p contient `vec[p]` satellites,
+  répartis uniformément via s/S.
+- Le terme `(F * p) / (S * P)` ajoute un déphasage dépendant du plan,
+  évitant l'alignement vertical des satellites.
+
+Valeur retournée
+- Un vecteur d'objets `Sat` correspondant aux satellites définis par (a, i, Ω, M0).
 """
 function myconstellation(vec,F,i_deg,a)
 	sats = Sat[]

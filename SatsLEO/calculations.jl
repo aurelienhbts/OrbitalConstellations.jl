@@ -3,8 +3,22 @@ using LinearAlgebra
 """
 visible(r_ecef, lat_deg, lon_deg, eps_deg)
 
-Vérifie si un satellite est visible depuis un point au sol donné,
-en tenant compte d'un angle d'élévation minimal (ε).
+Détermine si un satellite est visible depuis un point donné au sol, en se basant
+sur l'angle d'élévation minimal `eps_deg`.  
+La fonction calcule l'angle entre le vecteur position du satellite (en ECEF)
+et le vecteur normal au point au sol.  
+Si cet angle est compatible avec l'élévation minimale requise, le satellite est
+considéré comme visible.
+
+Arguments
+- r_ecef   : Vecteur position du satellite dans le repère ECEF.
+- lat_deg  : Latitude du point au sol (en degrés).
+- lon_deg  : Longitude du point au sol (en degrés).
+- eps_deg  : Angle d'élévation minimal (en degrés) pour considérer le satellite visible.
+
+Valeur retournée
+- true si le satellite satisfait la contrainte d'élévation minimale.
+- false sinon.
 """
 function visible(r_ecef, lat_deg, lon_deg, eps_deg)
     ϕ = deg2rad(lat_deg)
@@ -26,8 +40,24 @@ end
 """
 coverage_fraction(sats, t, latmin, latmax, eps_deg; dlat=2, dlon=2)
 
-Calcule la fraction (%) de points visibles au moins par un satellite **à un instant t donné**.
-Tient compte de l'élévation minimale nécessaire pour voir les satellites depuis le sol.
+Calcule la fraction (%) de points visibles au moins par un satellite **à l'instant t**.
+La visibilité tient compte de l'élévation minimale `eps_deg`, c'est-à-dire de
+l'angle sous lequel un point au sol doit voir le satellite pour être considéré
+comme couvert.
+
+Arguments
+- sats     : Liste des satellites constituant la constellation.
+- t        : Instant d'évaluation (en secondes) dans le repère inertiel.
+- latmin   : Latitude minimale des points au sol à tester.
+- latmax   : Latitude maximale des points au sol à tester.
+- eps_deg  : Angle d'élévation minimal (en degrés) pour considérer un satellite visible.
+
+Paramètres optionnels
+- dlat     : Pas d'échantillonnage en latitude (en degrés).
+- dlon     : Pas d'échantillonnage en longitude (en degrés).
+
+Valeur retournée
+- Pourcentage de points visibles au moins par un satellite à l'instant t.
 """
 function coverage_fraction(sats, t, latmin, latmax, eps_deg; dlat=2, dlon=2)
 
@@ -81,8 +111,25 @@ end
 """
 mean_coverage_fraction(sats, latmin, latmax, eps_deg; n=100, dlat=2, dlon=2)
 
-Calcule la fraction (%) des points visibles au moins par un satellite en moyenne sur une période orbitale.
-Tient compte de l'élévation minimale nécessaire pour voir les satellites depuis le sol (ε).
+Calcule la fraction (%) des points visibles au moins par un satellite en moyenne
+sur une période orbitale complète.  
+Tient compte de l'élévation minimale `eps_deg` requise pour considérer qu'un point
+au sol est effectivement couvert.
+
+Arguments
+- sats     : Liste d'objets satellites constituant la constellation.
+- latmin   : Latitude minimale (en degrés) des points au sol à évaluer.
+- latmax   : Latitude maximale (en degrés) des points au sol à évaluer.
+- eps_deg  : Angle d'élévation minimal pour considérer qu'un satellite couvre un point.
+
+Paramètres optionnels
+- n        : Nombre de pas de temps uniformément espacés sur une période orbitale.
+- dlat     : Résolution en latitude (en degrés) pour l'échantillonnage au sol.
+- dlon     : Résolution en longitude (en degrés) pour l'échantillonnage au sol.
+
+Valeur retournée
+- La couverture moyenne, exprimée en fraction, obtenue en évaluant la couverture
+  à n instants répartis sur une période orbitale.
 """
 function mean_coverage_fraction(sats, latmin, latmax, eps_deg; n=100, dlat=2, dlon=2)
     a = sats[1].a
@@ -98,102 +145,28 @@ end
 """
 eval_constellation(vec, F, i_deg, a, eps_deg)
 
-Évalue une constellation définie par `vec` et retourne la couverture moyenne sur une période et le nombre total de satellites.
+Évalue une constellation décrite par le vecteur `vec` et retourne deux informations :
+la couverture moyenne obtenue sur une période ainsi que le nombre total de satellites.
+
+Arguments
+- vec     : Vecteur indiquant le nombre de satellites dans chaque plan orbital.
+- F       : Paramètre de phasage (Walker-Delta) utilisé pour construire la constellation.
+- i_deg   : Inclinaison orbitale en degrés.
+- a       : Demi-grand axe de l'orbite (en mètres), généralement Re + altitude.
+- eps_deg : Angle d'élévation minimal pour considérer qu'un point au sol est couvert.
+
+Paramètres optionnels
+- n       : Nombre d'échantillons temporels utilisés pour évaluer la couverture moyenne.
+- dlat    : Résolution en latitude (en degrés) pour les points tests au sol.
+- dlon    : Résolution en longitude (en degrés) pour les points tests au sol.
+
+Valeurs retournées
+- cov     : Couverture moyenne en pourcentage (fraction de points visibles en moyenne).
+- N       : Nombre total de satellites générés à partir de `vec`.
 """
 function eval_constellation(vec, F, i_deg, a, eps_deg; n=100, dlat=2, dlon=2)
     sats = myconstellation(vec, F, i_deg, a)
     cov = mean_coverage_fraction(sats, -i_deg, i_deg, eps_deg; n=n, dlat=dlat, dlon=dlon)
     N = length(sats)
     return cov, N
-end
-
-"""
-random_vec(P, N)
-
-Génère un vecteur aléatoire de longueur P contenant une répartition libre
-de N satellites parmi P plans orbitaux.
-"""
-function random_vec(P, N)
-    vec = zeros(Int, P)              # Compteur de satellites par plan
-    for _ in 1:N
-        vec[rand(1:P)] += 1          # Ajoute un satellite à un plan choisi au hasard
-    end
-    return vec
-end
-
-"""
-mutate_vec(vec; p_mut=0.3)
-
-Effectue des mutations sur `vec` en déplaçant des satellites d'un plan à un autre
-selon la probabilité `p_mut`.
-"""
-function mutate_vec!(vec; p_mut=0.3)
-    P = length(vec)
-    v = copy(vec)
-
-    for _ in 1:P
-        #rand() < p_mut || continue     # Mutation avec probabilité p_mut
-        i = rand(1:P)                  # Plan d'où on retire
-        j = rand(1:P)                  # Plan où on ajoute
-        i == j && continue
-
-        v[i] ≥ 1 || continue # Pour ne pas avoir de plan avec des valeurs négatives
-        v[i] -= 1
-        v[j] += 1
-    end
-    return v
-end
-
-"""
-fitness(vec, F, i_deg, a, eps_deg; Cmin=75.0)
-
-Évalue la qualité d'une constellation.  
-- Si la couverture `cov` est sous un seuil `Cmin`, on applique une forte pénalité.  
-- Sinon, on maximise `cov` tout en pénalisant faiblement le nombre total de satellites `N`.
-"""
-function fitness(vec, F, i_deg, a, eps_deg; Cmin=75.0)
-    cov, N = eval_constellation(vec, F, i_deg, a, eps_deg; n=20, dlat=4, dlon=4) # Performance actuelle (couverture grossière)
-
-    if cov < Cmin
-        return cov - 1000.0    # Forte pénalité si le seuil n'est pas atteint
-    else
-        return cov # Je pourrais faire 'cov - 0.1*N' mais N es fixe dans l'implémentation actuelle
-    end
-end
-
-"""
-evolve_vec(P, N, F, i_deg, a, eps_deg; popsize=20, generations=30, Cmin=0.0)
-
-Algorithme génétique simple pour optimiser la répartition de N satellites sur P plans orbitaux. Initialise une population aléatoire, sélectionne les meilleures configurations selon `fitness`, les fait muter et retourne le meilleur vecteur trouvé ainsi que sa couverture.
-"""
-function evolve_vec(P, N, F, i_deg, a, eps_deg; popsize=20, generations=30, Cmin=0.0)
-	
-    population = [random_vec(P, N) for _ in 1:popsize]              # Population initiale
-	
-    best_vec = copy(population[1])
-    best_fit = fitness(best_vec, F, i_deg, a, eps_deg; Cmin=Cmin)   # Initialisation de best_fit
-
-    for _ in 1:generations
-        fits = [fitness(v, F, i_deg, a, eps_deg; Cmin=Cmin) for v in population]
-        order = sortperm(fits, rev=true)                            # Classement par fitness
-        population = population[order]
-        fits = fits[order]
-
-        if fits[1] > best_fit
-            best_fit = fits[1]
-            best_vec = copy(population[1])                          # Mise à jour de best_fit
-        end
-
-        elite = population[1:clamp(popsize ÷ 4, 1, popsize)]        # Élites conservées
-        newpop = copy(elite)
-        while length(newpop) < popsize
-            parent = elite[rand(1:length(elite))]
-            child = mutate_vec!(parent)                              # Mutation d'un parent
-            push!(newpop, child)
-        end
-        population = newpop
-    end
-
-    cov, _ = eval_constellation(best_vec, F, i_deg, a, eps_deg)
-    return best_vec, cov
 end
