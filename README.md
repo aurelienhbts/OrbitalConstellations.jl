@@ -28,7 +28,6 @@ The objective is to provide a clean, modular, and reusable framework for simulat
 ## 🌐 Code Documentation Language
 
 **All code comments and docstrings inside the Julia source files are written in French.**  
-This is intentional and ensures full clarity and consistency for French-speaking ES313 students.  
 The README remains in **English** for broader accessibility.
 
 ---
@@ -41,6 +40,7 @@ Minimal Julia dependencies:
 - `Plots.jl`
 
 Multithreading (optional): `Threads.@threads`
+Logging (optinal): `Logging`
 
 ---
 
