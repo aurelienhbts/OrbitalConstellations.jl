@@ -34,12 +34,6 @@ begin
 	Logging.disable_logging(LogLevel(1000));
 end
 
-# ╔═╡ a123ac24-44c3-4c00-aed6-eed6cffe14f2
-begin
-	using Random
-	Random.seed!(178);
-end
-
 # ╔═╡ bf43c4f4-11ce-455b-a3d2-5e1c11ab40d5
 begin
     include("./SatsLEO/SatsLEO.jl")
@@ -62,32 +56,14 @@ html"""
 </style>
 """
 
-# ╔═╡ 6730fbd6-2cdd-4f88-a00c-182a601e6d97
-## Paramètres
-
-begin
-	h_km=550 			# Altitude des satellites
-	eps_deg=10 			# Elevation minimale nécéssaire pour voir le satellite depuis le sol
-	i_deg=30 			# Inclinaison orbitale (angle avec l'équateur) pour savoir les lattitudes couvertes
-	P=2 				# Nombre de plans orbitaux
-	S=7 				# Nombre de satellites par plan
-	F=0 				# Facteur de déphasage (pour décaler la position des satellites entre les plans afin d'éviter qu'ils soient alignés)
-	a=Re + h_km*1e3 	# Demi-grand axe pour calculer la période orbitale
-	t=0 				# Temps en secondes
-
-	sats=walker_delta(P,S,F,i_deg,a)
-end
-
-# ╔═╡ 1ef59fe9-61f3-410a-b022-17d1592a2fc3
-begin
-	Ptest = 6
-	Ntest = 21
-	best_vec, best_cov = evolve_vec(Ptest, Ntest, F, i_deg, a, eps_deg; popsize=30, generations=40, Cmin=0.0)
-	cov_final, _ = eval_constellation(best_vec, F, i_deg, a, eps_deg; n=100, dlat=1, dlon=1)
-	best_vec, best_cov, cov_final
-end
+# ╔═╡ 2a60ed85-bc78-42e4-ae5a-f42b8c9be9d1
+empty!(FITCACHE) # A relancer avant de lancer une nouvelle config de P et de N
 
 # ╔═╡ aa86b509-4bc9-4a95-84b6-9063f2e36b63
+# ╠═╡ disabled = true
+#=╠═╡
+# Ici comme on utilise quelques vecteurs aléatoires, on aura pas le vecteur optimal
+
 begin
     results = []
     Cmin = 95
@@ -112,8 +88,32 @@ begin
 	idx   = argmax(covs)
 	
 	best  = cands[idx]
-	#good
+	good
 	#cands
+end
+  ╠═╡ =#
+
+# ╔═╡ 6730fbd6-2cdd-4f88-a00c-182a601e6d97
+## Paramètres
+
+begin
+	h_km=550 			# Altitude des satellites
+	eps_deg=10 			# Elevation minimale nécéssaire pour voir le satellite depuis le sol
+	i_deg=30 			# Inclinaison orbitale (angle avec l'équateur) pour savoir les lattitudes couvertes
+	P=2 				# Nombre de plans orbitaux
+	S=7 				# Nombre de satellites par plan
+	F=0 				# Facteur de déphasage (pour décaler la position des satellites entre les plans afin d'éviter qu'ils soient alignés)
+	a=Re + h_km*1e3 	# Demi-grand axe pour calculer la période orbitale
+	t=0 				# Temps en secondes
+
+	sats=walker_delta(P,S,F,i_deg,a)
+end
+
+# ╔═╡ 1ef59fe9-61f3-410a-b022-17d1592a2fc3
+begin
+	Pmax = 6
+	Ntest = 19
+	best_vec, best_cov = evolve_vec(Pmax, Ntest, F, i_deg, a, eps_deg; popsize=20, generations=100, Cmin=50.0, Pbonus=true)
 end
 
 # ╔═╡ 41c3fdd3-e596-4f88-beda-16157552fea9
@@ -126,11 +126,14 @@ coverage_fraction(sats, t, -i_deg, i_deg, eps_deg)
 coverage_fraction(sats2, t, -i_deg, i_deg, eps_deg)
 
 # ╔═╡ 47fee197-c516-4624-a8a8-63345ade9841
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	p_1 = show_coverage_heatmap(sats2, t, eps_deg)
 	p_2 = plot_constellation(sats2, t)
 	plot(p_1, p_2; layout=(1,2), size=(1300,600))
 end
+  ╠═╡ =#
 
 # ╔═╡ f8f4c11b-b506-45df-b6b4-50abbe999c64
 PlutoUI.LocalResource("./Figures/coverage_fraction_période.png")
@@ -179,9 +182,9 @@ end
 # ╠═8969a0b2-50f7-4573-9c63-40dcf7ef773e
 # ╠═6f253d7b-c6be-4755-a81e-75c8bd13c642
 # ╠═daca6429-e148-42d3-9499-bfd1dbc04531
-# ╠═a123ac24-44c3-4c00-aed6-eed6cffe14f2
 # ╠═bf43c4f4-11ce-455b-a3d2-5e1c11ab40d5
 # ╠═1ef59fe9-61f3-410a-b022-17d1592a2fc3
+# ╠═2a60ed85-bc78-42e4-ae5a-f42b8c9be9d1
 # ╠═aa86b509-4bc9-4a95-84b6-9063f2e36b63
 # ╠═6730fbd6-2cdd-4f88-a00c-182a601e6d97
 # ╠═41c3fdd3-e596-4f88-beda-16157552fea9
@@ -190,7 +193,7 @@ end
 # ╠═47fee197-c516-4624-a8a8-63345ade9841
 # ╟─f8f4c11b-b506-45df-b6b4-50abbe999c64
 # ╟─5b53534e-2155-4675-a271-454b92e3c96e
-# ╠═287f599c-0932-4d5c-ae28-16c6488d585a
+# ╟─287f599c-0932-4d5c-ae28-16c6488d585a
 # ╠═84ff8c5f-5c92-4336-acb4-cd643d3e56e6
 # ╟─89b95e5c-684c-44ca-9455-469e3bb97129
 # ╠═8926723b-d835-4818-9073-89eea4b0dea4
