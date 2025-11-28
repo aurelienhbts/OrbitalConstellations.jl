@@ -2,7 +2,7 @@ using LinearAlgebra
 
 ## Constantes
 const μ = 3.986004418e14 	# Paramètre gravitationnel terrestre (m³/s²)
-const Re = 6.371e6 		    # Rayon moyen de la Terre (m)
+const Re = 6.371e6 		    # Rayon moyen de la Terre (m)s
 const ωe = 7.2921150e-5 	# Vitesse de rotation de la Terre (rad/s)
 
 """
@@ -120,11 +120,6 @@ en coordonnées géographiques latitude-longitude, exprimées en degrés.
 Arguments
 - r : Vecteur position (x, y, z) en coordonnées ECEF.
 
-Comportement
-- La latitude est obtenue via l'angle entre le vecteur position et le plan équatorial.
-- La longitude est l'angle dans le plan équatorial entre l'axe X (méridien de Greenwich)
-  et la projection du vecteur sur ce plan.
-
 Valeurs retournées
 - (latitude_deg, longitude_deg) : Latitude et longitude en degrés.
 """
@@ -149,15 +144,6 @@ Arguments
 - t   : Temps écoulé (en secondes) depuis l'instant de référence.
 - mu  : Paramètre gravitationnel (par défaut `μ`).
 
-Comportement
-- Le mouvement orbital est supposé circulaire.
-- L'anomalie moyenne évolue selon `M(t) = M0 + n*t`.
-- La position inertielle est obtenue en appliquant successivement :
-    1) une rotation d'ascension du nœud Ω,
-    2) une rotation d'inclinaison i,
-    3) une rotation d'anomalie u,
-  au vecteur `[a, 0, 0]` situé sur l'orbite circulaire.
-
 Valeur retournée
 - Vecteur position du satellite dans le repère ECI.
 """
@@ -181,13 +167,6 @@ Arguments
 - F      : Facteur de déphasage entre les plans (Walker phasing).
 - i_deg  : Inclinaison orbitale (en degrés).
 - a      : Demi-grand axe de l'orbite (en mètres).
-
-Comportement
-- Les plans orbitaux sont espacés uniformément en ascension du nœud,
-  suivant Ω = 2π·p / P.
-- Les satellites sont répartis uniformément dans chaque plan via s/S.
-- Le paramètre F introduit un déphasage supplémentaire entre les plans
-  afin d'éviter l'alignement vertical des satellites (offset typique Walker).
 
 Valeur retournée
 - Un vecteur de structures `Sat`, chacune définie par ses paramètres
@@ -221,15 +200,6 @@ Arguments
 - F      : Paramètre de phasage (Walker phasing) appliqué entre les plans.
 - i_deg  : Inclinaison orbitale en degrés.
 - a      : Demi-grand axe de l'orbite (en mètres).
-
-Comportement
-- Les plans sont répartis uniformément autour de l'axe z, avec :
-      Ω = 2π · p / P
-  pour p = 1, …, P.
-- Chaque plan p contient `vec[p]` satellites,
-  répartis uniformément via s/S.
-- Le terme `(F * p) / (S * P)` ajoute un déphasage dépendant du plan,
-  évitant l'alignement vertical des satellites.
 
 Valeur retournée
 - Un vecteur d'objets `Sat` correspondant aux satellites définis par (a, i, Ω, M0).

@@ -143,7 +143,7 @@ function mean_coverage_fraction(sats, latmin, latmax, eps_deg; n=100, dlat=2, dl
 end
 
 """
-eval_constellation(vec, F, i_deg, a, eps_deg)
+eval_constellation(vec, F, i_deg, a, eps_deg; n=100, dlat=2, dlon=2)
 
 Évalue une constellation décrite par le vecteur `vec` et retourne deux informations :
 la couverture moyenne obtenue sur une période ainsi que le nombre total de satellites.

@@ -8,11 +8,6 @@ Arguments
 - P : Nombre total de plans orbitaux disponibles.
 - N : Nombre total de satellites à répartir.
 
-Comportement
-Chaque satellite est assigné aléatoirement à l'un des P plans, ce qui produit
-un vecteur de taille P où chaque entrée indique le nombre de satellites
-présents dans ce plan.
-
 Valeur retournée
 - Un vecteur entier de longueur P contenant la distribution aléatoire des N satellites.
 """
@@ -33,13 +28,8 @@ d'un plan orbital vers un autre.
 
 Arguments
 - vec     : Vecteur de taille P représentant la répartition actuelle des satellites.
-- p_mut   : Probabilité qu’une mutation soit appliquée à chacun des essais effectués
+- p_mut   : Probabilité qu'une mutation soit appliquée à chacun des essais effectués
             à travers les P plans orbitaux.
-
-Comportement
-À chaque itération, un plan source et un plan destination sont choisis aléatoirement.
-Si le plan source contient au moins un satellite et que la mutation est acceptée avec
-probabilité `p_mut`, un satellite est retiré du plan source et ajouté au plan destination.
 
 Valeur retournée
 - Un nouveau vecteur muté, basé sur `vec`, sans modifier l'original.
@@ -51,8 +41,8 @@ function mutate_vec!(vec; p_mut=0.3)
         rand() < p_mut || continue
         i = rand(1:P)
         j = rand(1:P)
-        i == j && continue
-        v[i] > 0 || continue
+        i == j && continue 
+        v[i] > 0 || continue # Il faut evidement qu'il y ai un satellite sur le plan i
         v[i] -= 1
         v[j] += 1
     end
@@ -65,11 +55,7 @@ const FITCACHE = Dict{UInt64, Float64}()
 """
 hashvec(v)
 
-Construit un identifiant unique et hashable pour un vecteur `v`.
-Comme les tableaux Julia sont mutables et ne possèdent pas de méthode `hash`
-définie par défaut, le vecteur est converti en `Tuple`, qui est immuable
-et donc hashable.  
-
+Construit un identifiant unique et hashable pour un vecteur `v`. 
 Utilisé pour indexer efficacement les vecteurs dans `FITCACHE`.
 
 Arguments
@@ -109,10 +95,10 @@ function fitness(vec, F, i_deg, a, eps_deg; Cmin=75.0, Pbonus=true)
         return FITCACHE[h]
     end
 
-    cov, N = eval_constellation(vec, F, i_deg, a, eps_deg; n=10, dlat=6, dlon=6) # Maillage grossier (plus rapide et pas de grande différence dans les valeurs)
+    cov, N = eval_constellation(vec, F, i_deg, a, eps_deg; n=10, dlat=6, dlon=6) # Maillage grossier (+ rapide et pas de grande diff dans les valeurs)
 
     n_used = count(!iszero, vec)
-    bonus = Pbonus ? 0.25 * (length(vec) - n_used) : 0 # Si Pbonus:true, on a un bonus en fonction du nombre de plans vides
+    bonus = Pbonus ? 0.2 * (length(vec) - n_used) : 0 # Si Pbonus=true, on ajoute un bonus en fonction du nombre de plans vides
 
     fit = cov < Cmin ? cov - 100.0 : cov + bonus # Si cov < Cmin, on applique une forte pénalité
     FITCACHE[h] = fit
@@ -144,30 +130,29 @@ Valeurs de retour
 """
 function evolve_vec(P, N, F, i_deg, a, eps_deg; popsize=20, generations=30, Cmin=0.0, Pbonus=true)
 
-    population = [random_vec(P, N) for _ in 1:popsize]                                          # Population initiale
+    population = [random_vec(P, N) for _ in 1:popsize] # Population initiale
     best_vec = population[1]
-    best_fit = fitness(best_vec, F, i_deg, a, eps_deg; Cmin=Cmin, Pbonus=Pbonus)                # Initialisation de best_fit
+    best_fit = fitness(best_vec, F, i_deg, a, eps_deg; Cmin=Cmin, Pbonus=Pbonus) # Initialisation de best_fit
 
     for _ in 1:generations
-        fits = [fitness(v, F, i_deg, a, eps_deg; Cmin=Cmin, Pbonus=Pbonus) for v in population] # Classement par fitness
-
-        order = sortperm(fits, rev=true)
-        elite = population[order[1:clamp(popsize÷4, 1, popsize)]]
+        fits = [fitness(v, F, i_deg, a, eps_deg; Cmin=Cmin, Pbonus=Pbonus) for v in population]
+        order = sortperm(fits, rev=true) # Classement par fitness
+        elite = population[order[1:clamp(popsize÷4, 1, popsize)]] # On prend que 1/4 des vecteurs (les meilleurs)
         
         if fits[order[1]] > best_fit
-            best_fit = fits[order[1]]                                                           # Mise à jour de best_fit
+            best_fit = fits[order[1]] # Mise à jour de best_fit
             best_vec = elite[1]
         end
 
         newpop = copy(elite)
         while length(newpop) < popsize
             p = elite[rand(1:end)]
-            child = mutate_vec!(p)                                                              # Mutation d'un parent
-            push!(newpop, child)
+            child = mutate_vec!(p) # Mutation d'un vecteur aléatoire
+            push!(newpop, child) # Ajout du mutant
         end
         population = newpop
     end
 
-    cov, _ = eval_constellation(best_vec, F, i_deg, a, eps_deg; n=100, dlat=1, dlon=1)          # Plus fin pour le cov final
+    cov, _ = eval_constellation(best_vec, F, i_deg, a, eps_deg; n=100, dlat=1, dlon=1) # Plus fin pour le cov final
     return best_vec, cov
 end
