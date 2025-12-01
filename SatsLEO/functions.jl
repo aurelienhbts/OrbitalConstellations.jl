@@ -127,3 +127,28 @@ function improve_vec_fixed_N!(vec, F, i_deg, a, eps_deg)
 
     return vec, cov
 end
+
+# Pas une fonction mais toujours interressant à garder quand même
+# Ici comme on utilise quelques vecteurs aléatoires, on aura pas le vecteur optimal
+begin
+    results = []
+    Cmin = 95
+    for P in 2:10, N in 2:25
+        vec = random_vec(P, N)
+        cov, Nt = eval_constellation(vec, F, i_deg, a, eps_deg)
+        push!(results, (P=P, vec=vec, N=Nt, cov=cov))
+    end
+	good = filter(r -> r.cov ≥ Cmin, results)
+	if isempty(good)
+	    error("Aucune constellation ne dépasse Cmin = $Cmin")
+	end
+	Ns    = getfield.(good, :N)
+	minN  = minimum(Ns)
+	
+	cands = filter(r -> r.N == minN, good)
+	covs  = getfield.(cands, :cov)
+	idx   = argmax(covs)
+	best  = cands[idx]
+	#good
+	#cands
+end
