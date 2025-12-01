@@ -58,3 +58,36 @@ let
     )
 	savefig(plot,"./convergence_mean_coverage")
 end
+
+# Convergence de la couverture en fonction de l'altitude (Pmax = 6, N = 19)
+let
+    eps_deg = 10
+    i_deg = 30
+    F = 0
+    htest = 500:20:1000
+    cov_a = Vector{Float64}(undef, length(htest))
+    Pmax = 6 
+    Ntest = 19 
+    for idx in eachindex(htest)
+        a = htest[idx]*1e3 + Re
+        empty!(FITCACHE)
+        results = Vector{Tuple}(undef, 15)
+        Threads.@threads for t in 1:15
+            results[t] = evolve_vec(Pmax, Ntest, F, i_deg, a, eps_deg; popsize=20, generations=200, Pbonus=true)
+        end
+        covs = [r[2] for r in results]
+        cov_a[idx] = maximum(covs)
+    end
+	boss = plot(
+	    htest, cov_a;
+	    marker = (:circle, 6, :blue, stroke(0)),
+	    line = (:solid, 2, :blue),
+	    legend = false,
+	    grid = true,
+	    title = "Convergence de la couverture en fonction de l'altitude\nPmax = 6, N = 19",
+	    xlabel = "Altitude des satellites (km)",
+	    ylabel = "Couverture (%)",
+	    titlefont = (12, "Arial")
+	)
+	savefig(boss, "./convergence_cov_altitude.png")
+end
