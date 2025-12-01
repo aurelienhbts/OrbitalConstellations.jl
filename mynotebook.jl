@@ -40,6 +40,9 @@ begin
     using .SatsLEO
 end
 
+# ╔═╡ fc0fcc59-3267-4909-a632-7092467e13e0
+using StatsBase
+
 # ╔═╡ 287f599c-0932-4d5c-ae28-16c6488d585a
 using FileIO, PlutoUI
 
@@ -56,45 +59,31 @@ html"""
 </style>
 """
 
-# ╔═╡ 8a2943fe-4a3e-40e7-a38c-61229134646e
-empty!(FITCACHE) # A relancer avant de lancer une nouvelle config de P et de N
-
-# ╔═╡ 66528144-5768-47a2-87a5-004eb746f6ee
-length(FITCACHE)
-
-# ╔═╡ aa86b509-4bc9-4a95-84b6-9063f2e36b63
+# ╔═╡ fff4d4f2-3965-4dbc-a76b-e649827a063d
 # ╠═╡ disabled = true
 #=╠═╡
-# Ici comme on utilise quelques vecteurs aléatoires, on aura pas le vecteur optimal
-
 begin
-    results = []
-    Cmin = 95
-
-    for P in 2:10, N in 2:25
-        vec = random_vec(P, N)
-        cov, Nt = eval_constellation(vec, F, i_deg, a, eps_deg)
-        push!(results, (P=P, vec=vec, N=Nt, cov=cov))
-    end
-
-	good = filter(r -> r.cov ≥ Cmin, results)
-	
-	if isempty(good)
-	    error("Aucune constellation ne dépasse Cmin = $Cmin")
+	atest = 550 *1e3 + Re
+	Pmax = 6
+	Ntest = 19
+	configs = Dict()
+	Threads.@threads for _ in 1:10
+		best_vec, best_cov = evolve_vec(Pmax, Ntest, F, i_deg, atest, eps_deg; popsize=20, generations=300, Pbonus=false)
+		if !haskey(configs,(best_vec,best_cov))
+			configs[(best_vec,best_cov)] = 1
+		else 
+			configs[(best_vec,best_cov)] += 1
+		end
 	end
-	
-	Ns    = getfield.(good, :N)
-	minN  = minimum(Ns)
-	
-	cands = filter(r -> r.N == minN, good)
-	covs  = getfield.(cands, :cov)
-	idx   = argmax(covs)
-	
-	best  = cands[idx]
-	good
-	#cands
+	configs = sort!(collect(configs), by = x -> x[1][2], rev=true)
 end
   ╠═╡ =#
+
+# ╔═╡ 556db4d2-7329-4c7d-b1ee-d98245d8756a
+PlutoUI.LocalResource("./Figures/convergence_cov_altitude.png")
+
+# ╔═╡ e6121f95-8f68-47e3-97ae-0c6422b80ee4
+PlutoUI.LocalResource("./Figures/convergence_cov_altitude_2.png")
 
 # ╔═╡ 6730fbd6-2cdd-4f88-a00c-182a601e6d97
 ## Paramètres
@@ -110,23 +99,6 @@ begin
 	t=0 				# Temps en secondes
 
 	sats=walker_delta(P,S,F,i_deg,a)
-end
-
-# ╔═╡ fff4d4f2-3965-4dbc-a76b-e649827a063d
-begin
-	atest = 550 *1e3 + Re
-	Pmax = 6
-	Ntest = 19
-	configs = Dict()
-	Threads.@threads for _ in 1:1000
-		best_vec, best_cov = evolve_vec(Pmax, Ntest, F, i_deg, atest, eps_deg; popsize=20, generations=300, Pbonus=false)
-		if !haskey(configs,(best_vec,best_cov))
-			configs[(best_vec,best_cov)] = 1
-		else 
-			configs[(best_vec,best_cov)] += 1
-		end
-	end
-	sort!(collect(configs), by = x -> x[1][2], rev=true)
 end
 
 # ╔═╡ 41c3fdd3-e596-4f88-beda-16157552fea9
@@ -196,10 +168,10 @@ end
 # ╠═6f253d7b-c6be-4755-a81e-75c8bd13c642
 # ╠═daca6429-e148-42d3-9499-bfd1dbc04531
 # ╠═bf43c4f4-11ce-455b-a3d2-5e1c11ab40d5
-# ╠═8a2943fe-4a3e-40e7-a38c-61229134646e
+# ╠═fc0fcc59-3267-4909-a632-7092467e13e0
 # ╠═fff4d4f2-3965-4dbc-a76b-e649827a063d
-# ╠═66528144-5768-47a2-87a5-004eb746f6ee
-# ╠═aa86b509-4bc9-4a95-84b6-9063f2e36b63
+# ╟─556db4d2-7329-4c7d-b1ee-d98245d8756a
+# ╟─e6121f95-8f68-47e3-97ae-0c6422b80ee4
 # ╠═6730fbd6-2cdd-4f88-a00c-182a601e6d97
 # ╠═41c3fdd3-e596-4f88-beda-16157552fea9
 # ╠═4985fe03-5e41-4ad6-899e-d864639107f8
