@@ -23,7 +23,7 @@ begin
 end
 
 # ╔═╡ 8969a0b2-50f7-4573-9c63-40dcf7ef773e
-using LinearAlgebra, Plots
+using LinearAlgebra, Plots, FileIO, PlutoUI
 
 # ╔═╡ 6f253d7b-c6be-4755-a81e-75c8bd13c642
 using Base.Threads # Pour la performance
@@ -40,12 +40,6 @@ begin
     using .SatsLEO
 end
 
-# ╔═╡ fc0fcc59-3267-4909-a632-7092467e13e0
-using StatsBase
-
-# ╔═╡ 287f599c-0932-4d5c-ae28-16c6488d585a
-using FileIO, PlutoUI
-
 # ╔═╡ ffc4fe26-29ab-405c-abb4-441945e251f0
 html"""
  <! -- this adapts the width of the cells to display its being used on -->
@@ -59,33 +53,30 @@ html"""
 </style>
 """
 
-# ╔═╡ fff4d4f2-3965-4dbc-a76b-e649827a063d
-# ╠═╡ disabled = true
-#=╠═╡
+# ╔═╡ 89b95e5c-684c-44ca-9455-469e3bb97129
+md"""
+Click here to reload the GIF : $(@bind reload Button("Reload"))
+"""
+
+# ╔═╡ b2388c97-997d-4afd-a681-2b86b7c1458a
 begin
-	atest = 550 *1e3 + Re
-	Pmax = 6
-	Ntest = 19
-	configs = Dict()
-	Threads.@threads for _ in 1:10
-		best_vec, best_cov = evolve_vec(Pmax, Ntest, F, i_deg, atest, eps_deg; popsize=20, generations=300, Pbonus=false)
-		if !haskey(configs,(best_vec,best_cov))
-			configs[(best_vec,best_cov)] = 1
-		else 
-			configs[(best_vec,best_cov)] += 1
-		end
-	end
-	configs = sort!(collect(configs), by = x -> x[1][2], rev=true)
+	reload
+	PlutoUI.LocalResource("./Figures/cov.gif")
 end
-  ╠═╡ =#
 
-# ╔═╡ 556db4d2-7329-4c7d-b1ee-d98245d8756a
-PlutoUI.LocalResource("./Figures/convergence_cov_altitude.png")
+# ╔═╡ 8926723b-d835-4818-9073-89eea4b0dea4
+begin
+	reload
+	PlutoUI.LocalResource("./Figures/sats.gif")
+end
 
-# ╔═╡ e6121f95-8f68-47e3-97ae-0c6422b80ee4
-PlutoUI.LocalResource("./Figures/convergence_cov_altitude_2.png")
+# ╔═╡ 7a7ad281-b620-4fcf-9daa-2d4fc2985a80
+begin
+	reload
+	PlutoUI.LocalResource("./Figures/satstest.gif")
+end
 
-# ╔═╡ 6730fbd6-2cdd-4f88-a00c-182a601e6d97
+# ╔═╡ 58ae7adf-6552-434e-a086-8db4cf360c40
 ## Paramètres
 
 begin
@@ -101,65 +92,102 @@ begin
 	sats=walker_delta(P,S,F,i_deg,a)
 end
 
-# ╔═╡ 41c3fdd3-e596-4f88-beda-16157552fea9
-sats2 = myconstellation([8 8 8],1,i_deg,a)
-
-# ╔═╡ 4985fe03-5e41-4ad6-899e-d864639107f8
-coverage_fraction(sats, t, -i_deg, i_deg, eps_deg)
-
-# ╔═╡ a3c17370-10bb-4f00-ad67-626b244318d6
-coverage_fraction(sats2, t, -i_deg, i_deg, eps_deg)
-
-# ╔═╡ 47fee197-c516-4624-a8a8-63345ade9841
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	p_1 = show_coverage_heatmap(sats2, t, eps_deg)
-	p_2 = plot_constellation(sats2, t)
-	plot(p_1, p_2; layout=(1,2), size=(1300,600))
-end
-  ╠═╡ =#
-
-# ╔═╡ f8f4c11b-b506-45df-b6b4-50abbe999c64
-PlutoUI.LocalResource("./Figures/coverage_fraction_période.png")
-
-# ╔═╡ 5b53534e-2155-4675-a271-454b92e3c96e
-PlutoUI.LocalResource("./Figures/convergence_mean_coverage.png")
-
 # ╔═╡ 84ff8c5f-5c92-4336-acb4-cd643d3e56e6
 # Pour faire des GIFs sur CDN :)
 if !isfile("./Figures/cov.gif") #!isfile("./Figures/sats.gif")
     folder = mktempdir()
+	vec = [7 0 4 4 4 0]
+	satsgif = myconstellation(vec, F, i_deg, a)
 	Tmax = 10000
 	step = 100
     for t in 0:step:Tmax
-		show_coverage_heatmap(sats, t, eps_deg)
-		#plot_constellation(sats,t)
+		show_coverage_heatmap(satsgif, t, eps_deg)
+		#plot_constellation(satsgif,t)
         savefig(joinpath(folder, "frame_$(Int(t/step)).png"))
     end
 	
     frames = [load(joinpath(folder, "frame_$i.png")) for i in 0:Int(Tmax/step)]
     gr()
     save("./Figures/cov.gif", cat(frames..., dims=3))
-	#save("./Figures/sats.gif", cat(frames_..., dims=3))
+	#save("./Figures/sats.gif", cat(frames..., dims=3))
 end
 
-# ╔═╡ 89b95e5c-684c-44ca-9455-469e3bb97129
-md"""
-Click here to reload the GIF : $(@bind reload Button("Reload"))
-"""
+# ╔═╡ 1003088c-a8da-4f5b-a00c-e86adc808559
+# Pour faire des GIFs sur CDN :)
+if !isfile("./Figures/satstest.gif")
+    folder_ = mktempdir()
+	vec_ = [5 5 5 5 5 5 5 5 5 5]
+	satsgif_ = myconstellation(vec_, F, 40, a)
+	Tmax_ = 10000
+	step_ = 100
+    for t_ in 0:step_:Tmax_
+		plot_constellation(satsgif_,t_)
+        savefig(joinpath(folder_, "frame_$(Int(t_/step_)).png"))
+    end
+	
+    frames_ = [load(joinpath(folder_, "frame_$i.png")) for i in 0:Int(Tmax_/step_)]
+    gr()
+    save("./Figures/satstest.gif", cat(frames_..., dims=3))
+end
 
-# ╔═╡ 8926723b-d835-4818-9073-89eea4b0dea4
+# ╔═╡ 49421cdd-a296-4c84-8225-971ca3948ee7
+coverage_fraction(sats, t, -i_deg, i_deg, eps_deg; dlat=1, dlon=1)
+
+# ╔═╡ 47fee197-c516-4624-a8a8-63345ade9841
 begin
-	reload
-	#PlutoUI.LocalResource("./Figures/sats.gif")
+	sats2 = walker_delta(2, 10, 1, i_deg ,a)
+	p_1 = show_coverage_heatmap(sats2, t, eps_deg)
+	p_2 = plot_constellation(sats2, t)
+	plot(p_1, p_2; layout=(1,2), size=(1300,600))
 end
 
-# ╔═╡ b2388c97-997d-4afd-a681-2b86b7c1458a
+# ╔═╡ fa431955-2b5e-4379-bba0-fae209df6e47
+coverage_fraction(sats2, t, -i_deg, i_deg, eps_deg; dlat=1, dlon=1)
+
+# ╔═╡ f8f4c11b-b506-45df-b6b4-50abbe999c64
+PlutoUI.LocalResource("./Figures/coverage_fraction_période.png")
+
+# ╔═╡ bc5b4885-c49a-4fa3-8461-4e9f01998f09
+mean_coverage_fraction(sats2, -i_deg, i_deg, eps_deg; n=100, dlat=2, dlon=2)
+
+# ╔═╡ 5b53534e-2155-4675-a271-454b92e3c96e
+PlutoUI.LocalResource("./Figures/convergence_mean_coverage.png")
+
+# ╔═╡ 4a646cfe-ec7f-444e-a987-de5dcf2ff38e
+empty(FITCACHE) # A executer avant de changer de N, P ou a 
+
+# ╔═╡ 524192b6-7009-4907-978b-d45ef572260b
+length(FITCACHE)
+
+# ╔═╡ f07b36e2-f9b0-4248-8cf1-1901485e9052
+FITCACHE
+
+# ╔═╡ fff4d4f2-3965-4dbc-a76b-e649827a063d
 begin
-	reload
-	#PlutoUI.LocalResource("./Figures/cov.gif")
+	iter = 50
+	atest = 550 *1e3 + Re
+	Pmax = 6
+	Ntest = 19
+	configs = Dict()
+	Threads.@threads for _ in 1:iter
+		best_vec, best_cov = evolve_vec(Pmax, Ntest, F, i_deg, atest, eps_deg; popsize=20, generations=300, Pbonus=false)
+		if !haskey(configs,(best_vec,best_cov))
+			configs[(best_vec,best_cov)] = 1/iter
+		else 
+			configs[(best_vec,best_cov)] += 1/iter
+		end
+	end
+	configs = sort!(collect(configs), by = x -> x[1][2], rev=true)
 end
+
+# ╔═╡ 77df1252-0b82-4ea1-bbd2-af8615bd8e10
+PlutoUI.LocalResource("./collage.jpg")
+
+# ╔═╡ 556db4d2-7329-4c7d-b1ee-d98245d8756a
+PlutoUI.LocalResource("./Figures/convergence_cov_altitude.png")
+
+# ╔═╡ e6121f95-8f68-47e3-97ae-0c6422b80ee4
+PlutoUI.LocalResource("./Figures/convergence_cov_altitude_2.png")
 
 # ╔═╡ Cell order:
 # ╟─ffc4fe26-29ab-405c-abb4-441945e251f0
@@ -168,19 +196,23 @@ end
 # ╠═6f253d7b-c6be-4755-a81e-75c8bd13c642
 # ╠═daca6429-e148-42d3-9499-bfd1dbc04531
 # ╠═bf43c4f4-11ce-455b-a3d2-5e1c11ab40d5
-# ╠═fc0fcc59-3267-4909-a632-7092467e13e0
-# ╠═fff4d4f2-3965-4dbc-a76b-e649827a063d
-# ╟─556db4d2-7329-4c7d-b1ee-d98245d8756a
-# ╟─e6121f95-8f68-47e3-97ae-0c6422b80ee4
-# ╠═6730fbd6-2cdd-4f88-a00c-182a601e6d97
-# ╠═41c3fdd3-e596-4f88-beda-16157552fea9
-# ╠═4985fe03-5e41-4ad6-899e-d864639107f8
-# ╠═a3c17370-10bb-4f00-ad67-626b244318d6
-# ╠═47fee197-c516-4624-a8a8-63345ade9841
-# ╟─f8f4c11b-b506-45df-b6b4-50abbe999c64
-# ╟─5b53534e-2155-4675-a271-454b92e3c96e
-# ╟─287f599c-0932-4d5c-ae28-16c6488d585a
 # ╠═84ff8c5f-5c92-4336-acb4-cd643d3e56e6
 # ╟─89b95e5c-684c-44ca-9455-469e3bb97129
-# ╠═8926723b-d835-4818-9073-89eea4b0dea4
-# ╠═b2388c97-997d-4afd-a681-2b86b7c1458a
+# ╟─b2388c97-997d-4afd-a681-2b86b7c1458a
+# ╟─8926723b-d835-4818-9073-89eea4b0dea4
+# ╠═1003088c-a8da-4f5b-a00c-e86adc808559
+# ╟─7a7ad281-b620-4fcf-9daa-2d4fc2985a80
+# ╠═58ae7adf-6552-434e-a086-8db4cf360c40
+# ╠═49421cdd-a296-4c84-8225-971ca3948ee7
+# ╠═47fee197-c516-4624-a8a8-63345ade9841
+# ╠═fa431955-2b5e-4379-bba0-fae209df6e47
+# ╟─f8f4c11b-b506-45df-b6b4-50abbe999c64
+# ╠═bc5b4885-c49a-4fa3-8461-4e9f01998f09
+# ╟─5b53534e-2155-4675-a271-454b92e3c96e
+# ╠═4a646cfe-ec7f-444e-a987-de5dcf2ff38e
+# ╠═524192b6-7009-4907-978b-d45ef572260b
+# ╠═f07b36e2-f9b0-4248-8cf1-1901485e9052
+# ╠═fff4d4f2-3965-4dbc-a76b-e649827a063d
+# ╟─77df1252-0b82-4ea1-bbd2-af8615bd8e10
+# ╟─556db4d2-7329-4c7d-b1ee-d98245d8756a
+# ╟─e6121f95-8f68-47e3-97ae-0c6422b80ee4
