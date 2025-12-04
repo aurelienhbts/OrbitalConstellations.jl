@@ -78,7 +78,7 @@ let
         covs = [r[2] for r in results]
         cov_a[idx] = maximum(covs)
     end
-	boss = plot(
+	plot = plot(
 	    htest, cov_a;
 	    marker = (:circle, 6, :blue, stroke(0)),
 	    line = (:solid, 2, :blue),
@@ -89,5 +89,5 @@ let
 	    ylabel = "Couverture (%)",
 	    titlefont = (12, "Arial")
 	)
-	savefig(boss, "./convergence_cov_altitude.png")
+	savefig(plot, "./convergence_cov_altitude.png")
 end
