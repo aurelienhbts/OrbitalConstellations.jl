@@ -121,7 +121,7 @@ function plot_constellation(sats,t;Rearth=Re)
         R = R3(s.Ω) * R1(s.i)  # orientation du plan orbital
         orb = [R * [s.a * cos(θ), s.a * sin(θ), 0.0] for θ in θs]
         Xorb = [r[1] for r in orb]; Yorb = [r[2] for r in orb]; Zorb = [r[3] for r in orb]
-    p = plot3d!(p, Xorb, Yorb, Zorb, lw=0.5, c=:gray, alpha=0.5)  # Tracé des plans orbitaux
+        p = plot3d!(p, Xorb, Yorb, Zorb, lw=0.5, c=:gray, alpha=0.5)  # Tracé des plans orbitaux
     end
 	
     r_ecef = [eci_pos(s, t) for s in sats] # Position des satellites

@@ -195,8 +195,7 @@ Cela permet une plus grande flexibilité que la version classique
 `walker_delta(P, S, F, i_deg, a)`.
 
 Arguments
-- vec    : Vecteur de longueur P, où `vec[p]` représente le nombre de satellites
-           dans le plan orbital p.
+- vec    : Vecteur de longueur P, où `vec[p]` représente le nombre de satellites dans le plan orbital p.
 - F      : Paramètre de phasage (Walker phasing) appliqué entre les plans.
 - i_deg  : Inclinaison orbitale en degrés.
 - a      : Demi-grand axe de l'orbite (en mètres).

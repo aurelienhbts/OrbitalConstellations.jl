@@ -89,7 +89,7 @@ Valeur retournée
              Maximisé lorsque la couverture est haute et que la structure utilise peu de plans.
 """
 function fitness(vec, F, i_deg, a, eps_deg; Cmin=75.0, Pbonus=true)
-
+    
     h = hashvec(vec)
     if haskey(FITCACHE, h)
         return FITCACHE[h]
