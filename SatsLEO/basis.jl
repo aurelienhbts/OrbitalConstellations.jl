@@ -174,14 +174,13 @@ Valeur retournée
 """
 function walker_delta(P,S,F,i_deg,a)
     sats = Sat[]
-    for p in 0:P-1, s in 0:S-1 # On itère sur chaque plan orbital et sur chaque satellite par plan
-        
-		Ω = 2π * p / P # Ascension du nœud (Ω) → Chaque plan orbital est séparé de 360°/P autour de l'axe z.
-		
-        # Répartition uniforme des satellites sur chaque orbite (s/S),
-        M0 = 2π * (s / S + (F * p) / (S * P)) # Anomalie moyenne initiale (M₀) + déphasage (F*p)/(S*P) pour éviter que les plans soient alignés.
-
-        push!(sats, Sat(a, deg2rad(i_deg), Ω, M0)) # Création du satellite en fonction de a, i, Ω, M₀
+    for p in 0:P-1, s in 0:S-1
+      # Ascension du nœud (Ω) → Chaque plan orbital est séparé de 360°/P autour de l'axe z.
+      Ω = 2π * p / P
+      # Répartition uniforme des satellites sur chaque orbite (s/S)
+      # Anomalie moyenne initiale (M₀) + déphasage (F*p)/(S*P) pour éviter que les plans soient alignés.
+      M0 = 2π * (s / S + (F * p) / (S * P))
+      push!(sats, Sat(a, deg2rad(i_deg), Ω, M0)) # Création du satellite en fonction de a, i, Ω, M₀
     end
     return sats
 end
@@ -209,11 +208,11 @@ function myconstellation(vec,F,i_deg,a)
 	for p in 1:P
 		S = vec[p]
 		for s in 1:S
-			Ω = 2π * p / P # Ascension du nœud (Ω) → Chaque plan orbital est séparé de 360°/P autour de l'axe z.
-			
-			# Répartition uniforme des satellites sur chaque orbite (s/S),
-        	M0 = 2π * (s / S + (F * p) / (S * P)) # Anomalie moyenne initiale (M₀) + déphasage (F*p)/(S*P) pour éviter que les plans soient alignés.
-			
+      # Ascension du nœud (Ω) → Chaque plan orbital est séparé de 360°/P autour de l'axe z.
+			Ω = 2π * p / P
+			# Répartition uniforme des satellites sur chaque orbite (s/S)
+      # Anomalie moyenne initiale (M₀) + déphasage (F*p)/(S*P) pour éviter que les plans soient alignés.
+      M0 = 2π * (s / S + (F * p) / (S * P))
 			push!(sats, Sat(a, deg2rad(i_deg), Ω, M0)) # Création du satellite en fonction de a, i, Ω, M₀
 		end
 	end
