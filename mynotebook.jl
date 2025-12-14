@@ -31,7 +31,7 @@ using Base.Threads # Pour la performance
 # ╔═╡ daca6429-e148-42d3-9499-bfd1dbc04531
 begin
 	using Logging
-	Logging.disable_logging(LogLevel(1)) # Enlever les warnings
+	Logging.disable_logging(LogLevel(1000)) # Enlever les warnings
 end
 
 # ╔═╡ bf43c4f4-11ce-455b-a3d2-5e1c11ab40d5
@@ -166,14 +166,13 @@ PlutoUI.LocalResource("./Figures/convergence_mean_coverage.png")
 
 # ╔═╡ fff4d4f2-3965-4dbc-a76b-e649827a063d
 let
-	empty!(FITCACHE) # A executer avant de changer de N, P, a ou des paramètres liés à 'fitness'
-	iter = 1
+	iter = 10
 	atest = 550 *1e3 + Re
 	Pmax = 6
 	Ninit = 13
 	configs = Dict()
 	for _ in 1:iter
-		best_vec, cov_final, N_final = evolve_vec(Pmax, Ninit, F, i_deg, a, eps_deg; generations=100, Cmin=95)
+		best_vec, cov_final, N_final = evolve_vec(Pmax, Ninit, F, i_deg, a, eps_deg; generations=50, Cmin=95, K=5)
 		if !haskey(configs,(best_vec, cov_final, N_final))
 			configs[(best_vec, cov_final, N_final)] = 1/iter * 100
 		else 
@@ -183,9 +182,26 @@ let
 	configs = sort!(collect(configs), by = x -> x[1][2], rev=true)
 end
 
+# ╔═╡ 05899639-28f6-43e4-81ab-7f68e72ada48
+# Ajouter un Nmax 
+# 
+
+# ╔═╡ c08f4857-5666-4346-b66d-7ed4a943973d
+length(FITCACHE)
+
+# ╔═╡ 52f4dd4b-db3b-4a97-bb96-883b8ea3232d
+empty!(FITCACHE) # A executer avant de changer des paramètres liés à 'fitness'
+
+# ╔═╡ 402783a9-e443-40ee-a1ba-93c7899d9085
+# Comment gérer le fait qu'il soit possible que plusieurs vec soient ajoutés au FITCACHE en même temps ?
+
+# ╔═╡ 89fbe235-53ba-4c9b-83a9-2fbc8fea3396
+PlutoUI.LocalResource("./concurrent_write_dict.png")
+
 # ╔═╡ 6c8b3b55-bfc2-43d7-9d88-f6119ff61ee1
+# ╠═╡ disabled = true
+#=╠═╡
 let
-	empty!(FITCACHE) # A executer avant de changer de N, P, a ou des paramètres liés à 'fitness'
 	iter = 10
 	atest = 550 *1e3 + Re
 	Pmax = 6
@@ -201,6 +217,7 @@ let
 	end
 	configs = sort!(collect(configs), by = x -> x[1][2], rev=true)
 end
+  ╠═╡ =#
 
 # ╔═╡ 77df1252-0b82-4ea1-bbd2-af8615bd8e10
 PlutoUI.LocalResource("./collage.jpg")
@@ -232,6 +249,11 @@ PlutoUI.LocalResource("./Figures/convergence_cov_altitude_2.png")
 # ╠═bc5b4885-c49a-4fa3-8461-4e9f01998f09
 # ╟─5b53534e-2155-4675-a271-454b92e3c96e
 # ╠═fff4d4f2-3965-4dbc-a76b-e649827a063d
+# ╠═05899639-28f6-43e4-81ab-7f68e72ada48
+# ╠═c08f4857-5666-4346-b66d-7ed4a943973d
+# ╠═52f4dd4b-db3b-4a97-bb96-883b8ea3232d
+# ╠═402783a9-e443-40ee-a1ba-93c7899d9085
+# ╟─89fbe235-53ba-4c9b-83a9-2fbc8fea3396
 # ╠═6c8b3b55-bfc2-43d7-9d88-f6119ff61ee1
 # ╟─77df1252-0b82-4ea1-bbd2-af8615bd8e10
 # ╟─556db4d2-7329-4c7d-b1ee-d98245d8756a
