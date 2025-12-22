@@ -130,12 +130,6 @@ if !isfile("./Figures/satstest.gif")
     save("./Figures/satstest.gif", cat(frames_..., dims=3))
 end
 
-# ╔═╡ 49421cdd-a296-4c84-8225-971ca3948ee7
-# ╠═╡ disabled = true
-#=╠═╡
-coverage_fraction(sats, t, -i_deg, i_deg, eps_deg; dlat=1, dlon=1)
-  ╠═╡ =#
-
 # ╔═╡ 47fee197-c516-4624-a8a8-63345ade9841
 # ╠═╡ disabled = true
 #=╠═╡
@@ -147,32 +141,22 @@ begin
 end
   ╠═╡ =#
 
-# ╔═╡ fa431955-2b5e-4379-bba0-fae209df6e47
-# ╠═╡ disabled = true
-#=╠═╡
-coverage_fraction(sats2, t, -i_deg, i_deg, eps_deg; dlat=1, dlon=1)
-  ╠═╡ =#
-
 # ╔═╡ f8f4c11b-b506-45df-b6b4-50abbe999c64
 PlutoUI.LocalResource("./Figures/coverage_fraction_période.png")
-
-# ╔═╡ bc5b4885-c49a-4fa3-8461-4e9f01998f09
-#=╠═╡
-mean_coverage_fraction(sats2, -i_deg, i_deg, eps_deg; n=100, dlat=2, dlon=2)
-  ╠═╡ =#
 
 # ╔═╡ 5b53534e-2155-4675-a271-454b92e3c96e
 PlutoUI.LocalResource("./Figures/convergence_mean_coverage.png")
 
 # ╔═╡ fff4d4f2-3965-4dbc-a76b-e649827a063d
 let
-	iter = 10
-	atest = 550 *1e3 + Re
+	iter = 1
+	a_test = 20000 *1e3 + Re
+	i_deg_test = 85
 	Pmax = 6
-	Ninit = 13
+	Ninit = 10
 	configs = Dict()
 	for _ in 1:iter
-		best_vec, cov_final, N_final = evolve_vec(Pmax, Ninit, F, i_deg, a, eps_deg; generations=50, Cmin=95, K=5)
+		best_vec, cov_final, N_final = evolve_vec(Pmax, Ninit, F, i_deg_test, a_test, eps_deg; nsats=6, generations=150, Ctarget=99)
 		if !haskey(configs,(best_vec, cov_final, N_final))
 			configs[(best_vec, cov_final, N_final)] = 1/iter * 100
 		else 
@@ -182,9 +166,32 @@ let
 	configs = sort!(collect(configs), by = x -> x[1][2], rev=true)
 end
 
+# ╔═╡ af03b53e-054f-4a7d-8dde-9d602870f6c3
+satstest = myconstellation([0 5 0 7 3 7],F,35,20000 *1e3 + Re)
+
+# ╔═╡ c47bd5af-6d3e-4abb-8dce-6cee3ff97bf1
+show_coverage_heatmap(satstest,t,eps_deg)
+
+# ╔═╡ 36553c13-2ec0-4859-8e05-3de510b7e657
+plot_constellation(satstest,t)
+
+# ╔═╡ 2f4a57ab-b397-4fec-8f54-ba1ccebef27c
+mean_coverage_fraction(satstest, -i_deg, i_deg, eps_deg; nsats=5)
+
 # ╔═╡ 05899639-28f6-43e4-81ab-7f68e72ada48
 # Ajouter un Nmax 
-# 
+# Ajouter le fait qu'il faille plusieurs satellites par location 
+# (verifier 24 pour galileo ??) et voir l'impact si il y en a qui est defect
+# Comparer avec des constellations actuelles
+
+# ╔═╡ b269560d-ec58-4a02-a50a-5f3a6f91a111
+# PDOP → qualité du signal gnss (dilution of precision)
+# Calculer la line of sight des satellites 
+# Si la valeur est tres elevee, le gps n'est pas très précis
+
+# ╔═╡ f9e6e837-1a81-41b4-8c6a-5bbfcb44c122
+# Equations très connues concernant la communication
+# Si l'amplitude du signal niveau donné → constel optimale
 
 # ╔═╡ c08f4857-5666-4346-b66d-7ed4a943973d
 length(FITCACHE)
@@ -197,6 +204,9 @@ empty!(FITCACHE) # A executer avant de changer des paramètres liés à 'fitness
 
 # ╔═╡ 89fbe235-53ba-4c9b-83a9-2fbc8fea3396
 PlutoUI.LocalResource("./concurrent_write_dict.png")
+
+# ╔═╡ a38a8820-06d1-4716-af41-48bddf0af9b8
+# copie dans chaque threat et puis recombiner
 
 # ╔═╡ 6c8b3b55-bfc2-43d7-9d88-f6119ff61ee1
 # ╠═╡ disabled = true
@@ -242,18 +252,22 @@ PlutoUI.LocalResource("./Figures/convergence_cov_altitude_2.png")
 # ╠═1003088c-a8da-4f5b-a00c-e86adc808559
 # ╟─7a7ad281-b620-4fcf-9daa-2d4fc2985a80
 # ╠═58ae7adf-6552-434e-a086-8db4cf360c40
-# ╠═49421cdd-a296-4c84-8225-971ca3948ee7
 # ╠═47fee197-c516-4624-a8a8-63345ade9841
-# ╠═fa431955-2b5e-4379-bba0-fae209df6e47
 # ╟─f8f4c11b-b506-45df-b6b4-50abbe999c64
-# ╠═bc5b4885-c49a-4fa3-8461-4e9f01998f09
 # ╟─5b53534e-2155-4675-a271-454b92e3c96e
 # ╠═fff4d4f2-3965-4dbc-a76b-e649827a063d
+# ╠═af03b53e-054f-4a7d-8dde-9d602870f6c3
+# ╠═c47bd5af-6d3e-4abb-8dce-6cee3ff97bf1
+# ╠═36553c13-2ec0-4859-8e05-3de510b7e657
+# ╠═2f4a57ab-b397-4fec-8f54-ba1ccebef27c
 # ╠═05899639-28f6-43e4-81ab-7f68e72ada48
+# ╠═b269560d-ec58-4a02-a50a-5f3a6f91a111
+# ╠═f9e6e837-1a81-41b4-8c6a-5bbfcb44c122
 # ╠═c08f4857-5666-4346-b66d-7ed4a943973d
 # ╠═52f4dd4b-db3b-4a97-bb96-883b8ea3232d
 # ╠═402783a9-e443-40ee-a1ba-93c7899d9085
 # ╟─89fbe235-53ba-4c9b-83a9-2fbc8fea3396
+# ╠═a38a8820-06d1-4716-af41-48bddf0af9b8
 # ╠═6c8b3b55-bfc2-43d7-9d88-f6119ff61ee1
 # ╟─77df1252-0b82-4ea1-bbd2-af8615bd8e10
 # ╟─556db4d2-7329-4c7d-b1ee-d98245d8756a
