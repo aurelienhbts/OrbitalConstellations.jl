@@ -49,10 +49,29 @@ function mutate_vec_fixedN(vec; p_mut=0.3)
     return v
 end
 
-const FITCACHE_fixedN = Dict{Tuple{Vararg{Int}}, Float64}()
+##########################################
+##########################################
+struct FitCache{K,V}
+    threads::Vector{Dict{K,V}}
+end
+
+FitCache{K,V}() where {K,V} = FitCache{K,V}([Dict{K,V}() for _ in 1:Threads.nthreads()])
+
+@inline _cache_threads(fc::FitCache, tid::Int) = fc.threads[tid == 0 ? Threads.threadid() : clamp(tid, 1, length(fc.threads))]
+
+function Base.empty!(fc::FitCache)
+    for c in fc.threads
+        empty!(c)
+    end
+    fc
+end
+
+const FITCACHE_fixedN = FitCache{Tuple{Vararg{Int}}, Float64}()
+##########################################
+##########################################
 
 """
-    fitness_fixedN(vec, F, i_deg, a, eps_deg; nsats=1, Cmin=75.0, Pbonus=true)
+    fitness_fixedN(vec, F, i_deg, a, eps_deg; tid=0, nsats=1, Cmin=75.0, Pbonus=true)
 
 Évalue la qualité d'une constellation candidate.
 
@@ -65,6 +84,7 @@ const FITCACHE_fixedN = Dict{Tuple{Vararg{Int}}, Float64}()
 - grid_ga  : Stucture `GroundGrid` contenant la grille lat/lon et des valeurs précalculées.
 
 # Paramètres optionnels
+- tid      : ID du thread si `fitness` est utilisé dans une boucle `Threads.@threads`.
 - nsats    : Nombre de satellites minimal qui doivent couvrir chaque point au sol.
 - Cmin     : Seuil minimal de couverture acceptable. Si la couverture retournée par `eval_constellation` est < Cmin, une pénalité de -100 est appliquée.
 - Pbonus   : Si true, récompense légèrement les vecteurs qui utilisent moins de plans orbitaux (bonus proportionnel au nombre de plans vides).
@@ -73,11 +93,13 @@ const FITCACHE_fixedN = Dict{Tuple{Vararg{Int}}, Float64}()
 - fit      : Score de qualité de la constellation.  
              Maximisé lorsque la couverture est haute et que la structure utilise peu de plans.
 """
-function fitness_fixedN(vec, F, i_deg, a, eps_deg, grid_ga; nsats=1, Cmin=75.0, Pbonus=true)
+function fitness_fixedN(vec, F, i_deg, a, eps_deg, grid_ga; tid=0, nsats=1, Cmin=75.0, Pbonus=true)
     
     key = Tuple(vec)
-    if haskey(FITCACHE_fixedN, key)
-        return FITCACHE_fixedN[key]
+    cache = _cache_threads(FITCACHE_fixedN, tid)
+
+    if haskey(cache, key)
+        return cache[key]
     end
     # Evaluation grossière de la configuration (ok pour l'algorithme)
     cov, N = eval_constellation_GA(vec, F, i_deg, a, eps_deg, grid_ga; n=10, nsats=nsats)
@@ -86,7 +108,7 @@ function fitness_fixedN(vec, F, i_deg, a, eps_deg, grid_ga; nsats=1, Cmin=75.0, 
     bonus = Pbonus ? 0.2 * (length(vec) - n_used) : 0 # Si Pbonus=true, on ajoute un bonus en fonction du nombre de plans vides
 
     fit = cov < Cmin ? cov - 100.0 : cov + bonus # Si cov < Cmin, on applique une forte pénalité
-    FITCACHE_fixedN[key] = fit
+    cache[key] = fit
     return fit
 end
 
@@ -104,6 +126,7 @@ Algorithme génétique simple pour optimiser la répartition de N satellites sur
 - eps_deg  : Angle d'élévation minimal (en degrés) pour considérer qu'un satellite couvre un point au sol.
 
 # Paramètres optionnels
+- grid_ga  : Stucture `GroundGrid` contenant la grille lat/lon et des valeurs précalculées.
 - nsats        : Nombre de satellites minimal qui doivent couvrir chaque point au sol.
 - popsize      : Taille de la population de vecteurs candidats (nombre de solutions évaluées par génération).
 - generations  : Nombre de générations de l'algorithme génétique (profondeur de la recherche).
@@ -114,9 +137,11 @@ Algorithme génétique simple pour optimiser la répartition de N satellites sur
 - best_vec : Vecteur de taille P contenant le nombre de satellites par plan pour la meilleure configuration trouvée.
 - cov      : Couverture moyenne correspondante (telle que renvoyée par `eval_constellation`, calculée avec une résolution plus fine à la fin).
 """
-function evolve_vec_fixedN(P, N, F, i_deg, a, eps_deg; nsats=1, popsize=20, generations=30, Cmin=75.0, Pbonus=true)
+function evolve_vec_fixedN(P, N, F, i_deg, a, eps_deg; grid_ga=0, nsats=1, popsize=20, generations=30, Cmin=75.0, Pbonus=true)
 
-    grid_ga = GroundGrid(-i_deg, i_deg; dlat=6, dlon=6) # Initialisation de GroundGrid
+    if grid_ga == 0  # Initialisation de GroundGrid si il n'est pas donné
+        grid_ga = GroundGrid(-i_deg, i_deg; dlat=6, dlon=6)
+    end
 
     population = Vector{Vector{Int}}(undef, popsize)
     Threads.@threads for i in 1:popsize
@@ -128,7 +153,8 @@ function evolve_vec_fixedN(P, N, F, i_deg, a, eps_deg; nsats=1, popsize=20, gene
 
     for _ in 1:generations
         Threads.@threads for i in 1:popsize
-            fits[i] = fitness_fixedN(population[i], F, i_deg, a, eps_deg, grid_ga; nsats=nsats, Cmin=Cmin, Pbonus=Pbonus)
+            tid = Threads.threadid()
+            fits[i] = fitness_fixedN(population[i], F, i_deg, a, eps_deg, grid_ga; tid=tid, nsats=nsats, Cmin=Cmin, Pbonus=Pbonus)
         end
 
         order = sortperm(fits, rev=true) # Classement par fitness

@@ -61,10 +61,29 @@ function mutate_vec(vec, best_cov, Ctarget; p_move=0.4, p_add_max=0.3, p_rem_max
     return v
 end
 
-const FITCACHE = Dict{Tuple{Vararg{Int}}, Tuple{Float64,Float64}}()
+##########################################
+##########################################
+struct FitCache{K,V}
+    threads::Vector{Dict{K,V}}
+end
+
+FitCache{K,V}() where {K,V} = FitCache{K,V}([Dict{K,V}() for _ in 1:Threads.nthreads()])
+
+@inline _cache_threads(fc::FitCache, tid::Int) = fc.threads[tid == 0 ? Threads.threadid() : clamp(tid, 1, length(fc.threads))]
+
+function Base.empty!(fc::FitCache)
+    for c in fc.threads
+        empty!(c)
+    end
+    fc
+end
+
+const FITCACHE = FitCache{Tuple{Vararg{Int}}, Tuple{Float64,Float64}}()
+##########################################
+##########################################
 
 """
-    fitness(vec, F, i_deg, a, eps_deg; nsats=1, 
+    fitness(vec, F, i_deg, a, eps_deg; tid=0, nsats=1, 
             Ncoef=0.75, Pcoef=0.3, Ctarget=95.0, K=5.0)
 
 Évalue la qualité d'une configuration orbitale variable en nombre de satellites.
@@ -79,6 +98,7 @@ Maximisé lorsque la couverture est élevée, que le nombre de satellites reste 
 - grid_ga  : Stucture `GroundGrid` contenant la grille lat/lon et des valeurs précalculées.
 
 # Paramètres optionnels
+- tid      : ID du thread si `fitness` est utilisé dans une boucle `Threads.@threads`.
 - nsats    : Nombre de satellites minimal qui doivent couvrir chaque point au sol.
 - Ncoef    : Coefficient contrôlant la pénalité liée au nombre total de satellites. Le malus est faible pour N < 17, élevé pour N > 23, et interpolé linéairement entre les deux.
 - Pcoef    : Bonus attribué aux configurations comportant des plans orbitaux vides.
@@ -89,11 +109,13 @@ Maximisé lorsque la couverture est élevée, que le nombre de satellites reste 
 - cov      : Coverage de la constellation.
 - fit      : Score de qualité de la constellation.
 """
-function fitness(vec, F, i_deg, a, eps_deg, grid_ga; nsats=1, Ncoef=0.75, Pcoef=0.3, Ctarget=95.0, K=5.0)
+function fitness(vec, F, i_deg, a, eps_deg, grid_ga; tid=0, nsats=1, Ncoef=0.75, Pcoef=0.3, Ctarget=95.0, K=5.0)
 
     key = Tuple(vec)
-    if haskey(FITCACHE, key)
-        return FITCACHE[key]
+    cache = _cache_threads(FITCACHE, tid)
+
+    if haskey(cache, key)
+        return cache[key]
     end
     # Evaluation grossière de la configuration (ok pour l'algorithme)
     cov, N = eval_constellation_GA(vec, F, i_deg, a, eps_deg, grid_ga; n=10, nsats=nsats)
@@ -108,13 +130,15 @@ function fitness(vec, F, i_deg, a, eps_deg, grid_ga; nsats=1, Ncoef=0.75, Pcoef=
         Nmalus = (0.3 + 0.7 * t) * Ncoef
     end
 
+    P_effect = exp(-P_empty / 5)
+
     if cov >= 99.9999 # Augmenter le malus si la cov depasse 100%
         Nmalus *= 3.0
     end
     penalty_cov = max(0.0, Ctarget - cov) * K
 
     fit = cov - Nmalus * N + Pcoef * P_empty - penalty_cov
-    FITCACHE[key] = cov, fit
+    cache[key] = cov, fit
     return cov, fit
 end
 
@@ -134,6 +158,7 @@ la répartition des satellites par plan et le nombre total de satellites.
 - eps_deg    : Angle d'élévation minimal requis pour la visibilité.
 
 # Paramètres optionnels
+- grid_ga  : Stucture `GroundGrid` contenant la grille lat/lon et des valeurs précalculées.
 - nsats    : Nombre de satellites minimal qui doivent couvrir chaque point au sol.
 - popsize    : Taille de la population évoluée à chaque génération.
 - generations: Nombre de générations de l'algorithme génétique.
@@ -151,10 +176,12 @@ la répartition des satellites par plan et le nombre total de satellites.
 - cov_final  : Couverture moyenne finale associée à `best_vec` (évaluée finement).
 - N_final    : Nombre total de satellites de la configuration optimale retenue.
 """
-function evolve_vec(P, N_init, F, i_deg, a, eps_deg; nsats=1, popsize=30, generations=40, Nmax=30,
+function evolve_vec(P, N_init, F, i_deg, a, eps_deg; grid_ga=0, nsats=1, popsize=30, generations=40, Nmax=30,
                     Ncoef=0.75, Pcoef=0.3, Ctarget=95.0, K=5.0, p_move=0.4, p_add_max=0.3, p_rem_max=0.2)
 
-    grid_ga = GroundGrid(-i_deg, i_deg; dlat=6, dlon=6) # Initialisation de GroundGrid
+    if grid_ga == 0  # Initialisation de GroundGrid si il n'est pas donné
+        grid_ga = GroundGrid(-i_deg, i_deg; dlat=6, dlon=6)
+    end
 
     population = Vector{Vector{Int}}(undef, popsize)
     Threads.@threads for i in 1:popsize
@@ -169,7 +196,8 @@ function evolve_vec(P, N_init, F, i_deg, a, eps_deg; nsats=1, popsize=30, genera
 
     for _ in 1:generations
         Threads.@threads for i in 1:popsize
-            cov, fit = fitness(population[i], F, i_deg, a, eps_deg, grid_ga; nsats=nsats, Ncoef=Ncoef, Pcoef=Pcoef, Ctarget=Ctarget, K=K)
+            tid = Threads.threadid()
+            cov, fit = fitness(population[i], F, i_deg, a, eps_deg, grid_ga; tid=tid, nsats=nsats, Ncoef=Ncoef, Pcoef=Pcoef, Ctarget=Ctarget, K=K)
             covs[i] = cov
             fits[i] = fit
         end
