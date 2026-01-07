@@ -36,8 +36,8 @@ end
 
 # ╔═╡ bf43c4f4-11ce-455b-a3d2-5e1c11ab40d5
 begin
-    include("./SatsLEO/SatsLEO.jl") # Module SatsLEO dev pour le projet
-    using .SatsLEO
+    include("./OrbitalConstellations/OrbitalConstellations.jl") # Module dev pour le projet
+    using .OrbitalConstellations
 end
 
 # ╔═╡ ffc4fe26-29ab-405c-abb4-441945e251f0
@@ -154,11 +154,13 @@ empty!(FITCACHE)
 length(FITCACHE.threads[1])
 
 # ╔═╡ fff4d4f2-3965-4dbc-a76b-e649827a063d
+# ╠═╡ disabled = true
+#=╠═╡
 let
 	iter = 5
-	a_test = 500 *1e3 + Re
-	Pmax = 6
-	Ninit = 75
+	a_test = 20000 *1e3 + Re
+	Pmax = 8
+	Ninit = 20
 	grid_ga = GroundGrid(-i_deg, i_deg; dlat=6, dlon=6) # Initialisation de GroundGrid
 	configs = Dict()
 	for _ in 1:iter
@@ -171,9 +173,39 @@ let
 	end
 	configs = sort!(collect(configs), by = x -> x[1][2], rev=true)
 end
+  ╠═╡ =#
+
+# ╔═╡ 4c9bea89-3198-4447-a063-4a7f3be71394
+empty!(FITCACHE_pdop)
+
+# ╔═╡ c43ec0b0-87c2-4b40-abbb-a13911acb831
+begin
+	P_pdop = 6
+	Ninit_pdop = 24
+	F_pdop = 1
+	i_deg_pdop = 55
+	eps_deg_pdop = 10
+	
+	alt = 20200e3
+	a_pdop = Re + alt
+
+	grid_ga_pdop = GroundGrid(-i_deg_pdop, i_deg_pdop; dlat=6, dlon=6)
+end
+
+# ╔═╡ c655e6a1-38fd-4e70-8df4-7f7436e72de6
+vec_pdop, mpdop, cov, N = evolve_vec_pdop(P_pdop, Ninit_pdop, F_pdop, i_deg_pdop, a_pdop, eps_deg_pdop; grid_ga=grid_ga_pdop, popsize=40, generations=60)
+
+# ╔═╡ 7287cda3-ec8f-43bd-a77b-d1a80f753bef
+mpdop_fine, cov_fine, N_fine = eval_constellation_pdop(vec_pdop, F_pdop, i_deg_pdop, a_pdop, eps_deg_pdop, grid_ga_pdop; n=120)
+
+# ╔═╡ 7ce0aecc-90e2-4cbd-9af1-26c5f1057635
+begin
+	sats_best = myconstellation(vec_pdop, F_pdop, i_deg_pdop, a_pdop)
+	pdop_bxl = pdop_point(sats_best, 0.0, 50.85, 4.35, eps_deg_pdop)
+end
 
 # ╔═╡ 2bbfeca6-9f80-46a6-a2cd-e6c2a8fb4bf1
-# Verifier 24 pour galileo 
+# Verifier 24 pour galileo (4 sats pour chaque location)
 # Voir l'impact si il y en a qui est defect
 # Comparer avec des constellations actuelles
 
@@ -190,6 +222,8 @@ end
 empty!(FITCACHE_fixedN)
 
 # ╔═╡ 6c8b3b55-bfc2-43d7-9d88-f6119ff61ee1
+# ╠═╡ disabled = true
+#=╠═╡
 let
 	iter = 10
 	atest = 550 *1e3 + Re
@@ -207,6 +241,7 @@ let
 	end
 	configs = sort!(collect(configs), by = x -> x[1][2], rev=true)
 end
+  ╠═╡ =#
 
 # ╔═╡ 556db4d2-7329-4c7d-b1ee-d98245d8756a
 PlutoUI.LocalResource("./Figures/convergence_cov_altitude.png")
@@ -234,6 +269,11 @@ PlutoUI.LocalResource("./Figures/convergence_cov_altitude_2.png")
 # ╠═c08f4857-5666-4346-b66d-7ed4a943973d
 # ╠═aa6bf1f7-003e-42f7-a134-fe0f3ae62d10
 # ╠═fff4d4f2-3965-4dbc-a76b-e649827a063d
+# ╠═4c9bea89-3198-4447-a063-4a7f3be71394
+# ╠═c43ec0b0-87c2-4b40-abbb-a13911acb831
+# ╠═c655e6a1-38fd-4e70-8df4-7f7436e72de6
+# ╠═7287cda3-ec8f-43bd-a77b-d1a80f753bef
+# ╠═7ce0aecc-90e2-4cbd-9af1-26c5f1057635
 # ╠═2bbfeca6-9f80-46a6-a2cd-e6c2a8fb4bf1
 # ╠═b269560d-ec58-4a02-a50a-5f3a6f91a111
 # ╠═f9e6e837-1a81-41b4-8c6a-5bbfcb44c122
