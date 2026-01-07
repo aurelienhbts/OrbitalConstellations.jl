@@ -28,116 +28,76 @@ The `OrbitalConstellations` module provides tools to:
 
 ---
 
+## Dependencies
+
+This project relies exclusively on standard Julia packages:
+
+- **LinearAlgebra** – Matrix operations, norms, eigenvalues, Cholesky decomposition, etc.
+- **Plots** – 2D and 3D visualization of the Earth, satellite orbits, constellations, and coverage heatmaps.
+- **Base.Threads** – Multi-threading support for accelerating coverage, PDOP, and genetic optimization computations.
+
+---
+
 ## Installation / Usage
 
 Place all source files in the same directory and load the module:
 
 ```julia
-include("OrbitalConstellations.jl")
+include("./OrbitalConstellations/OrbitalConstellations.jl")
 using .OrbitalConstellations
 ```
 
 ---
 
-## Basic Example: Create a Walker Constellation
+## Examples
+
+Below is a minimal set of examples illustrating the main features of the module: constellation definition, coverage evaluation, optimization, and visualization. 
+
+All functions, parameters, and assumptions are documented through detailed docstrings (in French).
+These docstrings are accessible via the Live Docs panel in Pluto notebooks, which is the recommended environment for exploring the module.
 
 ```julia
+include("./OrbitalConstellations/OrbitalConstellations.jl")
+using .OrbitalConstellations
+
 P = 6
 S = 4
 F = 1
 i_deg = 55.0
 a = Re + 550e3
-
-sats = walker_delta(P, S, F, i_deg, a)
-```
-
-This creates a Walker-Delta constellation with 24 satellites.
-
----
-
-## Compute Coverage
-
-```julia
 eps_deg = 10.0
-vec = [4 5 4 5]
 
-cov, N = eval_constellation(vec, F, i_deg, a, eps_deg)
-```
+sats = walker_delta(P, S, F, i_deg, a)      # Build a Walker-Delta constellation
 
-This evaluates the average Earth coverage and returns the total number of satellites.
+vec = [4, 5, 4, 5]                          # Satellites per orbital plane
+cov, N = eval_constellation(vec, F, i_deg, a, eps_deg)  # Compute mean coverage
 
----
-
-## Optimization (Variable Number of Satellites)
-
-```julia
 best_vec, cov_final, N_final =
-    evolve_vec(
-        8,
-        16,
-        1,
-        55.0,
-        Re + 600e3,
-        10.0;
-        generations = 50
-    )
+    evolve_vec(8, 16, 1, 55.0, Re + 600e3, 10.0; generations = 50)  # GA with variable N
+
+best_vec_fixed, cov_fixed =
+    evolve_vec_fixedN(8, 20, 1, 55.0, Re + 600e3, 10.0)              # GA with fixed N
+
+best_vec_pdop, mpdop, cov_pdop, N_pdop =
+    evolve_vec_pdop(8, 16, 1, 55.0, Re + 600e3, 10.0)                # PDOP-driven GA
+
+plot_constellation(sats, 0.0)               # 3D visualization of the constellation
+show_coverage_heatmap(sats, 0.0, eps_deg)   # Earth coverage heatmap
 ```
 
-This runs a genetic algorithm to maximize coverage while controlling the constellation size.
+## Visualizations
 
----
+<p align="center">
+  <img src="Figures/sats.gif" width="600">
+  <br>
+  <em>3D visualization of a Walker-Delta satellite constellation.</em>
+</p>
 
-## Optimization (Fixed Number of Satellites)
-
-```julia
-best_vec, cov =
-    evolve_vec_fixedN(
-        8,
-        20,
-        1,
-        55.0,
-        Re + 600e3,
-        10.0
-    )
-```
-
-This optimizes the distribution of a fixed number of satellites across orbital planes.
-
----
-
-## PDOP-Based Optimization
-
-```julia
-best_vec, mpdop, cov, N =
-    evolve_vec_pdop(
-        8,
-        16,
-        1,
-        55.0,
-        Re + 600e3,
-        10.0
-    )
-```
-
-This optimization prioritizes constellation geometry quality using PDOP metrics.
-
----
-
-## Visualization
-
-### 3D Constellation View
-
-```julia
-plot_constellation(sats, 0.0)
-```
-
-### Coverage Heatmap
-
-```julia
-show_coverage_heatmap(sats, 0.0, 10.0)
-```
-
----
+<p align="center">
+  <img src="Figures/cov.gif" width="600">
+  <br>
+  <em>Earth coverage evolution over time.</em>
+</p>
 
 ## Notes
 
@@ -146,11 +106,3 @@ show_coverage_heatmap(sats, 0.0, 10.0)
 - The Earth is assumed spherical with constant rotation.  
 - Orbits are assumed circular. 
 - AI assistance (OpenAI GPT-5.1 / GPT-5.2) was used for documentation and code review.
-
----
-
-## Course Context
-
-This project is purely academic and was developed as part of  
-**ES313 – Mathematical Modeling and Computer Simulation**  
-at the **Royal Military Academy (Belgium)**.
