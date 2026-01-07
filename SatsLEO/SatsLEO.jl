@@ -18,6 +18,12 @@ export random_vec, mutate_vec_fixedN, FITCACHE_fixedN, fitness_fixedN, evolve_ve
 include("optimisation.jl")
 export random_vec, mutate_vec, fitness, evolve_vec, FITCACHE
 
+include("pdop.jl")
+export pdop_calcul, pdop_point, pdop, mean_pdop, eval_constellation_pdop
+
+include("optimisation_pdop.jl")
+export random_vec_pdop, mutate_vec_pdop, fitness_pdop, evolve_vec_pdop, FITCACHE_pdop
+
 include("visualisation.jl")
 export show_coverage_heatmap, plot_constellation, plot_earth
 

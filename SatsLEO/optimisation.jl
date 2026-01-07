@@ -21,9 +21,9 @@ function mutate_vec(vec, best_cov, Ctarget; p_move=0.4, p_add_max=0.3, p_rem_max
     v = copy(vec)
     N = sum(v)
 
-    gap = (best_cov - Ctarget) / Ctarget # p_add et p_rem variables en fonction du gap
-    p_add = p_add_max * clamp(-gap, 0.0, 1.0)
-    p_rem = p_rem_max * clamp(gap, 0.0, 1.0)
+    gap = (best_cov - Ctarget) / Ctarget
+    p_add = p_add_max * clamp(-gap, 0.0, 1.0)  # si cov < Ctarget, on favorise légèrement l'ajout
+    p_rem = p_rem_max * clamp(gap, 0.0, 1.0)   # si cov > Ctarget, on favorise légèrement le retrait
 
     for _ in 1:P
         if rand() < p_move && N > 1
@@ -225,6 +225,6 @@ function evolve_vec(P, N_init, F, i_deg, a, eps_deg; grid_ga=0, nsats=1, popsize
         population = newpop
     end
 
-    cov_final, N_final = eval_constellation(best_vec, F, i_deg, a, eps_deg; n=75, dlat=1, dlon=1, nsats=nsats)
+    cov_final, N_final = eval_constellation(best_vec, F, i_deg, a, eps_deg; n=75, dlat=1, dlon=1, nsats=nsats) # évaluation finale plus fine
     return best_vec, cov_final, N_final
 end

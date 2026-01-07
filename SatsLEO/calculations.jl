@@ -26,8 +26,8 @@ function visible(r_ecef, lat_deg, lon_deg, eps_deg)
 
     ρ = norm(r_ecef) # Distance entre le satellite et le centre de la Terre
 
-    cosγ = (r_ecef[1]*gx + r_ecef[2]*gy + r_ecef[3]*gz) / ρ
-    cosψmax = (Re / ρ) * cos(deg2rad(eps_deg)) # Angle entre la direction du satellite et celle du point au sol
+    cosγ = (r_ecef[1]*gx + r_ecef[2]*gy + r_ecef[3]*gz) / ρ # Angle entre la direction du satellite et celle du point au sol
+    cosψmax = (Re / ρ) * cos(deg2rad(eps_deg)) # Angle max pour l'observateur
 
     return cosγ >= cosψmax
 end
@@ -56,7 +56,7 @@ La visibilité tient compte de l'élévation minimale `eps_deg`, c'est-à-dire d
 function coverage_fraction(sats, t, latmin, latmax, eps_deg; dlat=2, dlon=2, nsats=1)
     r_ecef = [ecef_from_eci(eci_pos(s, t), t) for s in sats]
     ρs = map(norm, r_ecef)
-    cosψmax_s = (Re ./ ρs) .* cos(deg2rad(eps_deg)) # On précalcule cosψmax (angle entre la direction du satellite et celle du point au sol)
+    cosψmax_s = (Re ./ ρs) .* cos(deg2rad(eps_deg)) # On précalcule cosψmax (angle max pour l'observateur)
 
     lats = collect(latmin:dlat:latmax)
     lons = collect(-180:dlon:180)
