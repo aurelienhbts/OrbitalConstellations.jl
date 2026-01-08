@@ -53,7 +53,7 @@ using .OrbitalConstellations
 
 Below is a minimal set of examples illustrating the main features of the module: constellation definition, coverage evaluation, optimization, and visualization. 
 
-All functions, parameters, and assumptions are documented through detailed docstrings (in French).
+All functions and parameters are documented through detailed docstrings (in French).
 These docstrings are accessible via the Live Docs panel in Pluto notebooks, which is the recommended environment for exploring the module.
 
 ```julia
@@ -73,13 +73,13 @@ vec = [4, 5, 4, 5]                          # Satellites per orbital plane
 cov, N = eval_constellation(vec, F, i_deg, a, eps_deg)  # Compute mean coverage
 
 best_vec, cov_final, N_final =
-    evolve_vec(8, 16, 1, 55.0, Re + 600e3, 10.0; generations = 50)  # GA with variable N
+    evolve_vec(8, 16, 1, i_deg, a, eps_deg; generations = 50)  # GA with variable N
 
 best_vec_fixed, cov_fixed =
-    evolve_vec_fixedN(8, 20, 1, 55.0, Re + 600e3, 10.0)              # GA with fixed N
+    evolve_vec_fixedN(8, 16, 1, i_deg, a, eps_deg)             # GA with fixed N
 
 best_vec_pdop, mpdop, cov_pdop, N_pdop =
-    evolve_vec_pdop(8, 16, 1, 55.0, Re + 600e3, 10.0)                # PDOP-driven GA
+    evolve_vec_pdop(8, 16, 1, i_deg, a, eps_deg)               # PDOP-driven GA
 
 plot_constellation(sats, 0.0)               # 3D visualization of the constellation
 show_coverage_heatmap(sats, 0.0, eps_deg)   # Earth coverage heatmap
