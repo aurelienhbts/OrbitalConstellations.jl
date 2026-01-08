@@ -87,6 +87,8 @@ show_coverage_heatmap(sats, 0.0, eps_deg)   # Earth coverage heatmap
 
 ## Visualizations
 
+The following visualisations have been created using the plots created with the __plot_constellation__ and __show_coverage_heatmap__ functions.
+
 <p align="center">
   <img src="Figures/sats.gif" width="600">
   <br>
