@@ -55,7 +55,7 @@ empty!(FITCACHE_pdop)
 
 # ╔═╡ 6427fe21-9de3-47ea-aaea-c6da4a67ff20
 begin
-	iter = 10
+	iter = 250
 	a_galileo = 23222*1e3+Re
 	i_deg = 65
 	eps_deg = 10.0
@@ -88,6 +88,7 @@ begin
         bins = (minN - 0.5):1:(maxN + 0.5),
         xticks = ticksN,
         xlims = (minN - 0.5, maxN + 0.5),
+		ylims = (0, 100),
         xlabel = "Nombre de satellites N",
         ylabel = "Pourcentage [%]",
         title = "Histogramme de N ($iter itérations)",
@@ -98,50 +99,71 @@ end
 # ╔═╡ 929b36c0-0b12-4c5b-bbd1-2ec49d774bb8
 begin
     mpdops_all = [c[1][2] for c in configs]
-    w_all      = [c[2]    for c in configs]
+    w3_all     = [c[2]    for c in configs]
 
     mask = isfinite.(mpdops_all)
-    mpdops = mpdops_all[mask]
-    w_mpdop = w_all[mask]
-    w_mpdop .= 100 .* w_mpdop ./ sum(w_mpdop)
+    x  = mpdops_all[mask]
+    w3 = w3_all[mask]
+    w3 .= 100 .* w3 ./ sum(w3)
+
+    minx, maxx = extrema(x)
 
     histogram(
-        mpdops;
-        weights = w_mpdop,
-        bins = 30,
+        x;
+        weights = w3,
+        bins = range(minx, maxx; length=15),
+        xlims = (minx, maxx),
+        ylims = (0, 40),
+        xticks = round.(range(minx, maxx; length=7), digits=1),
+        yticks = 0:10:40,
         xlabel = "mpdop",
         ylabel = "Pourcentage [%]",
-        title = "Histogramme de PDOP ($iter itérations)",
-        legend = false
+        title  = "Histogramme de PDOP ($iter itérations)",
+        legend = false,
+        grid = true,
+        xminorgrid = true,
+        yminorgrid = true,
+        minorgrid = true,
+        gridalpha = 0.25,
+        minorgridalpha = 0.10,
+        xminorgridalpha = 0.20,
+        yminorgridalpha = 0.20,
+        gridlinewidth = 0.8,
+        minorgridlinewidth = 0.5,
+        xminorgridlinewidth = 0.6,
+        yminorgridlinewidth = 0.6
     )
 end
 
 # ╔═╡ c9caef05-beaa-4d48-a579-d706856c142f
 begin
     covs = [c[1][3] for c in configs]
-    w    = [c[2]    for c in configs]
+    w4   = [c[2]    for c in configs]
 
     histogram(
         covs;
-        weights = w,
+        weights = w4,
         bins = 95:0.25:100,
-        xticks = (95:1:100, string.(95:1:100)),
         xlims = (95, 100),
+        ylims = (0, 50),
+        xticks = (95:1:100, string.(95:1:100)),
+        yticks = 0:10:50,
         xlabel = "Couverture cov [%]",
         ylabel = "Pourcentage [%]",
-        title = "Histogramme de cov ($iter itérations)",
+        title  = "Histogramme de cov ($iter itérations)",
         legend = false,
+        grid = true,
         xminorgrid = true,
+        yminorgrid = true,
         minorgrid = true,
-        xminorgridalpha = 0.2,
-        minorgridalpha = 0.2,
-        xminorgridlinewidth = 0.4,
-        minorgridlinewidth = 0.4,
-        xtickfontsize = 12,
-        xguidefontsize = 12,
-        yguidefontsize = 12,
-        titlefontsize = 13,
-        tickfontsize = 11
+        xminorgridalpha = 0.25,
+        yminorgridalpha = 0.25,
+        minorgridalpha  = 0.10,
+        gridalpha       = 0.25,
+        xminorgridlinewidth = 0.6,
+        yminorgridlinewidth = 0.6,
+        minorgridlinewidth  = 0.5,
+        gridlinewidth       = 0.8
     )
 end
 
@@ -195,7 +217,7 @@ end
 # ╠═b856ac29-3431-47cf-8d5f-8672e68dc0bb
 # ╠═6427fe21-9de3-47ea-aaea-c6da4a67ff20
 # ╟─6643807e-c239-4713-b13e-8b7472b30a73
-# ╠═929b36c0-0b12-4c5b-bbd1-2ec49d774bb8
+# ╟─929b36c0-0b12-4c5b-bbd1-2ec49d774bb8
 # ╟─c9caef05-beaa-4d48-a579-d706856c142f
 # ╠═b1369aca-0b51-4c68-a2d4-9d93f2249003
 # ╠═64591d68-3623-4a29-8d76-dd24b8852120
