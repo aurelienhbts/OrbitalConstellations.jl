@@ -25,6 +25,7 @@ include("optimisation_pdop.jl")
 export random_vec_pdop, mutate_vec_pdop, fitness_pdop, evolve_vec_pdop, FITCACHE_pdop
 
 include("visualisation.jl")
-export show_coverage_heatmap, plot_constellation, plot_earth
+export show_coverage_heatmap, plot_constellation, plot_earth, 
+       show_pdop_coverage_heatmap, show_pdop_coverage_sphere
 
 end

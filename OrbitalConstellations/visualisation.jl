@@ -32,31 +32,32 @@ function show_coverage_heatmap(sats,t,eps_deg)
 end
 
 """
-    lot_earth(; Rearth=Re)
+    plot_earth(;Rearth=Re, bg_color=:lightblue)
 
 Trace une représentation 3D de la Terre sous forme de sphère, avec une transparence légère et des lignes de latitude.  
 L'équateur est affiché en bleu pour le distinguer visuellement des autres latitudes.
 
 # Arguments optionnels
-- Rearth : Rayon de la Terre utilisé pour la visualisation (par défaut `Re` défini dans le module).
+- Rearth  : Rayon de la Terre utilisé pour la visualisation (par défaut `Re` défini dans le module).
+- bg_color : Couleur pour le fond (bleu clair par défaut).
 
 # Valeur retournée
 - Une figure 3D représentant la Terre, prête à être utilisée comme base pour y superposer des orbites, des satellites ou des éléments de constellation.
 """
-function plot_earth(;Rearth=Re)
+function plot_earth(;Rearth=Re, bg_color=:lightblue)
 	# Hémisphère arrière de la Terre (longitudes ~ [-π, 0])
 	u = range(-pi/2, pi/2, 60); v1 = range(-pi, 0, 60)
 	xs = [Re*cos(ui)*cos(vi) for ui in u, vi in v1]
 	ys = [Re*cos(ui)*sin(vi) for ui in u, vi in v1]
 	zs = [Re*sin(ui)         for ui in u, vi in v1]
-	p = surface(xs, ys, zs, color=:lightblue, opacity=0.03, linecolor=:transparent)
+	p = surface(xs, ys, zs, color=bg_color, opacity=0.03, linecolor=:transparent)
 	
 	# Hémisphère avant de la Terre (longitudes ~ [0, π])
 	v2 = range(0, pi, 60)
 	xs = [Re*cos(ui)*cos(vi) for ui in u, vi in v2]
 	ys = [Re*cos(ui)*sin(vi) for ui in u, vi in v2]
 	zs = [Re*sin(ui)         for ui in u, vi in v2]
-	p = surface!(p, xs, ys, zs, color=:lightblue, opacity=0.05, linecolor=:transparent)
+	p = surface!(p, xs, ys, zs, color=bg_color, opacity=0.05, linecolor=:transparent)
 
 	# Ajout de lignes pour les latitudes
 	for lat_deg in -80:10:-10
@@ -126,4 +127,84 @@ function plot_constellation(sats,t;Rearth=Re)
     p = scatter3d!(p, X, Y, Z, marker=:circle, ms=3.5, color=:orange, title="Visualisation des satellites en t = $(Int(t))s") # Plot des satellites
 
 	return p
+end
+
+
+
+
+
+
+
+function show_pdop_coverage_heatmap(sats, t, eps_deg; min_sats=5, pdop_max=10.0, dlat=1, dlon=1)
+    lats = collect(-90:dlat:90)
+    lons = collect(-180:dlon:180)
+
+    r_ecef = [ecef_from_eci(eci_pos(s, t), t) for s in sats]
+    ρs = map(norm, r_ecef)
+    cosψmax = (Re ./ ρs) .* cos(deg2rad(eps_deg))
+
+    P = Array{Float64}(undef, length(lats), length(lons))
+
+    for (i, lat) in enumerate(lats)
+        ϕ = deg2rad(lat)
+        cosϕ = cos(ϕ) # On précalcule cosϕ pour ne pas le calculer plusieurs fois
+        sinϕ = sin(ϕ)  # On précalcule sinϕ pour ne pas le calculer plusieurs fois
+        for (j, lon) in enumerate(lons)
+            λ = deg2rad(lon)
+            # Vecteur qui pointe du centre de la Terre vers le point au sol défini par sa latitude et sa longitude. (repère ECEF)
+            gx = cosϕ * cos(λ)
+            gy = cosϕ * sin(λ)
+            gz = sinϕ
+            p = pdop_calcul(r_ecef, ρs, cosψmax, gx, gy, gz; min_sats=min_sats)
+            P[i, j] = isfinite(p) ? min(p, pdop_max) : NaN
+        end
+    end
+
+    p = heatmap(lons, lats, P; clims=(0.0, pdop_max), nan_color=:white)
+    p = plot!(p, xlabel="Longitude [°]", ylabel="Latitude [°]",
+              title="Coverage PDOP — N=$(length(sats)), t=$(Int(t))s",
+              aspect_ratio=1, framestyle=:none)
+    return p
+end
+
+function show_pdop_coverage_sphere(sats, t, eps_deg; min_sats=4, pdop_max=10.0, dlat=2, dlon=2, Rearth=Re)
+    lats = collect(-90:dlat:90)
+    lons = collect(-180:dlon:(180-dlon))
+
+    r_ecef = [ecef_from_eci(eci_pos(s, t), t) for s in sats]
+    ρs = map(norm, r_ecef)
+    cosψmax_s = (Re ./ ρs) .* cos(deg2rad(eps_deg))
+
+    nlat = length(lats)
+    nlon = length(lons)
+
+    X = Array{Float64}(undef, nlat, nlon)
+    Y = Array{Float64}(undef, nlat, nlon)
+    Z = Array{Float64}(undef, nlat, nlon)
+    P = Array{Float64}(undef, nlat, nlon)
+
+    for (i,lat) in enumerate(lats)
+        ϕ = deg2rad(lat)
+        cosϕ = cos(ϕ)  # On précalcule cosϕ pour ne pas le calculer plusieurs fois
+        sinϕ = sin(ϕ)  # On précalcule sinϕ pour ne pas le calculer plusieurs fois
+        for (j,lon) in enumerate(lons)
+            λ = deg2rad(lon)
+            # Vecteur qui pointe du centre de la Terre vers le point au sol défini par sa latitude et sa longitude. (repère ECEF)
+            gx = cosϕ * cos(λ)
+            gy = cosϕ * sin(λ)
+            gz = sinϕ
+
+            X[i,j] = Rearth*gx
+            Y[i,j] = Rearth*gy
+            Z[i,j] = Rearth*gz
+
+            p = pdop_calcul(r_ecef, ρs, cosψmax_s, gx, gy, gz; min_sats=min_sats)
+            P[i,j] = isfinite(p) ? min(p, pdop_max) : NaN
+        end
+    end
+
+    p = plot_earth(;Rearth=Rearth, bg_color=:white)
+    p = surface!(p, X, Y, Z; fill_z=P, c=:viridis, clims=(0.0, pdop_max), linewidth=0, linecolor=:transparent, opacity=0.98, nan_color=:transparent, colorbar=true)
+    plot!(p, grid=false, axis=false, ticks=:none, framestyle=:none, aspect_ratio=:equal, camera=(0,5))
+
 end

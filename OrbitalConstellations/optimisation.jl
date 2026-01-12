@@ -146,8 +146,7 @@ end
     evolve_vec(P, N_init, F, i_deg, a, eps_deg; nsats=1, popsize=30, generations=40,
                Ncoef=0.75, Pcoef=0.3, Ctarget=95.0, K=5.0, p_move=0.4, p_add=0.1, p_rem=0.05)
 
-Algorithme génétique qui optimise une constellation LEO en laissant varier à la fois
-la répartition des satellites par plan et le nombre total de satellites.
+Algorithme génétique qui optimise une constellation LEO en laissant varier à la fois la répartition des satellites par plan et le nombre total de satellites.
 
 # Arguments
 - P          : Nombre total de plans orbitaux disponibles.

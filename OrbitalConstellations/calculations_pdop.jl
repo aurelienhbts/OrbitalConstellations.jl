@@ -1,5 +1,5 @@
 """
-    pdop_calcul(r_ecef, ρs, cosψmax_s, gx, gy, gz; min_sats=4)
+    pdop_calcul(r_ecef, ρs, cosψmax_s, gx, gy, gz; min_sats=5)
 
 Calcule le PDOP 3D à un point sol défini par le vecteur unitaire (gx, gy, gz).
 
@@ -15,7 +15,7 @@ Calcule le PDOP 3D à un point sol défini par le vecteur unitaire (gx, gy, gz).
 # Valeur retournée
 - PDOP 3D. Retourne `Inf` si le nombre de satellites visibles est insuffisant.
 """
-function pdop_calcul(r_ecef, ρs, cosψmax_s, gx, gy, gz; min_sats=4)
+function pdop_calcul(r_ecef, ρs, cosψmax_s, gx, gy, gz; min_sats=5)
     rx = Re * gx # Distance en x entre le point au sol et le centre de la terre
     ry = Re * gy # Distance en y entre le point au sol et le centre de la terre
     rz = Re * gz # Distance en z entre le point au sol et le centre de la terre
@@ -74,7 +74,7 @@ function pdop_calcul(r_ecef, ρs, cosψmax_s, gx, gy, gz; min_sats=4)
 end
 
 """
-    pdop_point(sats, t, lat_deg, lon_deg, eps_deg; min_sats=4)
+    pdop_point(sats, t, lat_deg, lon_deg, eps_deg; min_sats=5)
 
 Calcule le Position Dilution of Precision (PDOP 3D) pour un point sol donné à un instant donné, en fonction de la géométrie de la constellation.
 
@@ -86,12 +86,12 @@ Calcule le Position Dilution of Precision (PDOP 3D) pour un point sol donné à 
 - eps_deg   : Angle d'élévation minimal (en degrés).
 
 # Paramètres optionnels
-- min_sats  : Nombre minimal de satellites visibles requis pour le calcul (défaut = 4).
+- min_sats  : Nombre minimal de satellites visibles requis pour le calcul. Défaut = 5 (4 et 1 réserve).
 
 # Valeur retournée
 - PDOP 3D. Retourne `Inf` si le nombre de satellites visibles est insuffisant.
 """
-function pdop_point(sats, t, lat_deg, lon_deg, eps_deg; min_sats=4)
+function pdop_point(sats, t, lat_deg, lon_deg, eps_deg; min_sats=5)
     ϕ = deg2rad(lat_deg)
     λ = deg2rad(lon_deg)
 
@@ -108,7 +108,7 @@ function pdop_point(sats, t, lat_deg, lon_deg, eps_deg; min_sats=4)
 end
 
 """
-    pdop(sats, t, grid::GroundGrid, eps_deg; min_sats=4)
+    pdop(sats, t, grid::GroundGrid, eps_deg; min_sats=5)
 
 Calcule le PDOP ainsi que la couverture sur une grille de points sol pour une constellation donnée à un instant donné.
 
@@ -123,9 +123,9 @@ Calcule le PDOP ainsi que la couverture sur une grille de points sol pour une co
 
 # Valeur retournée
 - mean_pdop : PDOP moyen calculé sur les points où il est défini.
-- cov       : Coverage (%) = % de points de la grille avec PDOP défini (>= min_sats visibles).
+- cov       : Coverage (%) = % de points de la grille avec PDOP défini. Défaut = 5 (4 et 1 réserve).
 """
-function pdop(sats, t, grid::GroundGrid, eps_deg; min_sats=4)
+function pdop(sats, t, grid::GroundGrid, eps_deg; min_sats=5)
     r_ecef = [ecef_from_eci(eci_pos(s, t), t) for s in sats]
     ρs = map(norm, r_ecef)
     cosψmax_s = (Re ./ ρs) .* cos(deg2rad(eps_deg))  # Angle max pour l'observateur
@@ -176,7 +176,7 @@ function pdop(sats, t, grid::GroundGrid, eps_deg; min_sats=4)
 end
 
 """
-    mean_pdop(sats, grid::GroundGrid, eps_deg; n=50, min_sats=4)
+    mean_pdop(sats, grid::GroundGrid, eps_deg; n=50, min_sats=5)
 
 Calcule des statistiques moyennes de PDOP sur une période orbitale complète,
 en moyennant les résultats obtenus à plusieurs instants.
@@ -191,13 +191,13 @@ pour lesquels le PDOP est défini (>= min_sats satellites visibles).
 
 # Paramètres optionnels
 - n         : Nombre d'instants d'échantillonnage sur une période orbitale (défaut = 50).
-- min_sats  : Nombre minimal de satellites visibles requis (défaut = 4).
+- min_sats  : Nombre minimal de satellites visibles requis. Défaut = 5 (4 et 1 réserve).
 
 # Valeur retournée
 - mean_pdop : PDOP moyen spatio-temporel (sur les points où il est défini).
 - cov       : Coverage moyen (%) sur la période orbitale.
 """
-function mean_pdop(sats, grid::GroundGrid, eps_deg; n=50, min_sats=4)
+function mean_pdop(sats, grid::GroundGrid, eps_deg; n=50, min_sats=5)
     a = sats[1].a
     T = 2π * sqrt(a^3 / μ)
     ts = range(0, T; length=n)
@@ -215,7 +215,7 @@ function mean_pdop(sats, grid::GroundGrid, eps_deg; n=50, min_sats=4)
 end
 
 """
-    eval_constellation_pdop(vec, F, i_deg, a, eps_deg, grid::GroundGrid; n=50, min_sats=4)
+    eval_constellation_pdop(vec, F, i_deg, a, eps_deg, grid::GroundGrid; n=50, min_sats=5)
 
 Évalue les performances PDOP d'une constellation définie par un vecteur de paramètres,
 indépendamment du processus d'optimisation.
@@ -234,14 +234,14 @@ Le coverage `cov` est défini comme le pourcentage de points où le PDOP est dé
 
 # Paramètres optionnels
 - n         : Nombre d'instants d'échantillonnage sur une période orbitale (défaut = 50).
-- min_sats  : Nombre minimal de satellites visibles requis (défaut = 4).
+- min_sats  : Nombre minimal de satellites visibles requis. Défaut = 5 (4 et 1 réserve).
 
 # Valeur retournée
 - mean_pdop : PDOP moyen spatio-temporel de la constellation.
 - cov       : Coverage moyen (%) associé au PDOP (>= min_sats visibles).
 - Ns        : Nombre total de satellites.
 """
-function eval_constellation_pdop(vec, F, i_deg, a, eps_deg, grid::GroundGrid; n=50, min_sats=4)
+function eval_constellation_pdop(vec, F, i_deg, a, eps_deg, grid::GroundGrid; n=50, min_sats=5)
     sats = myconstellation(vec, F, i_deg, a)
     mpdop, cov = mean_pdop(sats, grid, eps_deg; n=n, min_sats=min_sats)
     return mpdop, cov, length(sats)

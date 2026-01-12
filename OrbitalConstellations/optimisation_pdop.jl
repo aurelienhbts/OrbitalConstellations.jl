@@ -85,9 +85,9 @@ const FITCACHE_pdop = FitCachePDOP{Tuple{Vararg{Int}}, Tuple{Float64,Float64,Flo
 ##########################################
 
 """
-    fitness_pdop(vec, F, i_deg, a, eps_deg, grid_ga; tid=0, n=10, min_sats=4,
+    fitness_pdop(vec, F, i_deg, a, eps_deg, grid_ga; tid=0, n=10, min_sats=5,
                  pdop_weight=100.0, cov_pow=2.0, cov_bonus=5.0,
-                 Ncoef=0.05, Pcoef=0.05, Ctarget=90.0, Kcov=2.0)
+                 Ncoef=0.05, Pcoef=0.3, Ctarget=99.0, Kcov=2.0)
 
 Évalue la qualité d'une configuration orbitale en priorisant la performance PDOP.
 
@@ -116,9 +116,9 @@ const FITCACHE_pdop = FitCachePDOP{Tuple{Vararg{Int}}, Tuple{Float64,Float64,Flo
 - cov      : Coverage moyen (%) associé au PDOP (>= min_sats visibles).
 - fit      : Score global de qualité (à maximiser).
 """
-function fitness_pdop(vec, F, i_deg, a, eps_deg, grid_ga; tid=0, n=10, min_sats=4,
+function fitness_pdop(vec, F, i_deg, a, eps_deg, grid_ga; tid=0, n=10, min_sats=5,
                       pdop_weight=100.0, cov_pow=2.0, cov_bonus=5.0,
-                      Ncoef=0.05, Pcoef=0.05, Ctarget=90.0, Kcov=2.0)
+                      Ncoef=0.05, Pcoef=0.3, Ctarget=99.0, Kcov=2.0)
 
     key = Tuple(vec)
     cache = _cache_threads_pdop(FITCACHE_pdop, tid)
@@ -142,8 +142,8 @@ end
 
 """
     evolve_vec_pdop(P, N_init, F, i_deg, a, eps_deg; grid_ga=0, popsize=30, generations=40, Nmax=30,
-                    n=10, min_sats=4, pdop_weight=100.0, cov_pow=2.0, cov_bonus=5.0,
-                    Ncoef=0.05, Pcoef=0.05, Ctarget=90.0, Kcov=2.0,
+                    n=10, min_sats=5, pdop_weight=100.0, cov_pow=2.0, cov_bonus=5.0,
+                    Ncoef=0.05, Pcoef=0.3, Ctarget=99.0, Kcov=2.0,
                     p_move=0.4, p_add_max=0.3, p_rem_max=0.2)
 
 Algorithme génétique qui optimise une constellation en priorisant le PDOP.
@@ -181,8 +181,8 @@ Algorithme génétique qui optimise une constellation en priorisant le PDOP.
 - N_final      : Nombre total de satellites.
 """
 function evolve_vec_pdop(P, N_init, F, i_deg, a, eps_deg; grid_ga=0, popsize=30, generations=40, Nmax=30,
-                         n=10, min_sats=4, pdop_weight=100.0, cov_pow=2.0, cov_bonus=5.0,
-                         Ncoef=0.05, Pcoef=0.05, Ctarget=90.0, Kcov=2.0,
+                         n=10, min_sats=5, pdop_weight=100.0, cov_pow=2.0, cov_bonus=5.0,
+                         Ncoef=0.05, Pcoef=0.3, Ctarget=99.0, Kcov=2.0,
                          p_move=0.4, p_add_max=0.3, p_rem_max=0.2)
 
     if grid_ga == 0  # Initialisation de GroundGrid si il n'est pas donné
