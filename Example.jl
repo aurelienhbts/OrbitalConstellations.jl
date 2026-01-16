@@ -53,72 +53,114 @@ FITCACHE_pdop
 # ╔═╡ b856ac29-3431-47cf-8d5f-8672e68dc0bb
 empty!(FITCACHE_pdop)
 
+# ╔═╡ 1244e432-4ffa-4a9f-ad1e-7d8c99ebff9e
+length(FITCACHE_pdop.threads[1])
+
+# ╔═╡ 824a5fe3-0fb2-4a2c-a728-fa5b651f73d2
+mutable struct Configs
+	configs::Dict
+	iter::Int64
+end
+
+# ╔═╡ 08cc6015-3a01-454a-9b33-87621f105f23
+c = Configs(Dict(),0)
+
 # ╔═╡ 6427fe21-9de3-47ea-aaea-c6da4a67ff20
 begin
-	iter = 250
+	iter = 0
 	a_galileo = 23222*1e3+Re
 	i_deg = 65
 	eps_deg = 10.0
 	Pmax = 8
 	Ninit = 12
 	grid_ga = GroundGrid(-i_deg, i_deg; dlat=3, dlon=3) # Initialisation de GroundGrid
-	configs = Dict()
 	for _ in 1:iter
+		c.iter += 1
 		vec_pdop, mpdop, cov, N = evolve_vec_pdop(Pmax, Ninit, 1, i_deg, Re+24000e3, eps_deg)
-		if !haskey(configs,(vec_pdop, mpdop, cov, N))
-			configs[(vec_pdop, mpdop, cov, N)] = 1/iter * 100
+		if !haskey(c.configs,(vec_pdop, mpdop, cov, N))
+			c.configs[(vec_pdop, mpdop, cov, N)] = 1
 		else 
-			configs[(vec_pdop, mpdop, cov, N)] += 1/iter * 100
+			c.configs[(vec_pdop, mpdop, cov, N)] += 1
 		end
 	end
-	configs = sort!(collect(configs), by = x -> x[1][2], rev=true)
+	configs = sort!(collect(c.configs), by = x -> x[1][2], rev=true)
 end
+
+# ╔═╡ 05bd2086-93a9-4b2f-bb22-fb3594e44f7c
+c.iter
+
+# ╔═╡ fa9d0c80-b802-43cf-bb52-a4db3a3d73f3
+# Ajouter quelque chose qui me permet d'introduire manuellement une population dans evolve_vec_pdop afin de raffiner parmi la crème de la crème ?
+# Bonne idée seulement si j'ajoute 'artificiellement' des variations/de la diversité afin de ne pas juste rester dans la même région.
 
 # ╔═╡ 6643807e-c239-4713-b13e-8b7472b30a73
 begin
-    Ns = [c[1][4] for c in configs]
-    w2  = [c[2] for c in configs]
+    Ns = [c[1][4] for c in c.configs]
+    w2 = [c[2] for c in c.configs]/c.iter * 100
 
+	_ = Pmax
+	
     minN, maxN = extrema(Ns)
     ticksN = collect(minN:maxN)
 
-    histogram(
+    h1 = histogram(
         Ns;
         weights = w2,
-        bins = (minN - 0.5):1:(maxN + 0.5),
+        bins = (minN-0.5):1:(maxN+0.5),
         xticks = ticksN,
-        xlims = (minN - 0.5, maxN + 0.5),
+        xlims = (minN-0.5, maxN+0.5),
 		ylims = (0, 100),
         xlabel = "Nombre de satellites N",
         ylabel = "Pourcentage [%]",
-        title = "Histogramme de N ($iter itérations)",
+        title = "Histogramme de N ($(c.iter) itérations)",
+        legend = false
+    )
+end
+
+# ╔═╡ 62463c8e-693c-47ac-a343-82fb57955e89
+begin
+    vecs = [c[1][1] for c in c.configs]
+    P = [Pmax-count(iszero, vec) for vec in vecs]
+	w1 = [c[2] for c in c.configs]/c.iter * 100
+	
+    ticksP = collect(0:Pmax)
+	
+    h0 = histogram(
+        P;
+		weights = w1,
+        bins = (-0.5:1:Pmax+0.5),
+        xticks = ticksP,
+        xlims = (-0.5,Pmax+0.5),
+		ylims = (0, 100),
+        xlabel = "Nombre de plans orbitaux",
+        ylabel = "Pourcentage [%]",
+        title = "Histogramme de N ($(c.iter) itérations)",
         legend = false
     )
 end
 
 # ╔═╡ 929b36c0-0b12-4c5b-bbd1-2ec49d774bb8
 begin
-    mpdops_all = [c[1][2] for c in configs]
-    w3_all     = [c[2]    for c in configs]
+    mpdops = [c[1][2] for c in c.configs]
+    w3 = [c[2] for c in c.configs]/c.iter * 100
 
-    mask = isfinite.(mpdops_all)
-    x  = mpdops_all[mask]
-    w3 = w3_all[mask]
-    w3 .= 100 .* w3 ./ sum(w3)
+    mask = isfinite.(mpdops)
+    mpdops = mpdops[mask]
+    w3 = w3[mask]
+	
+    minx, maxx = extrema(mpdops)
 
-    minx, maxx = extrema(x)
-
-    histogram(
-        x;
+    h2 = histogram(
+        mpdops;
         weights = w3,
         bins = range(minx, maxx; length=15),
         xlims = (minx, maxx),
-        ylims = (0, 40),
+        ylims = (0, 50),
         xticks = round.(range(minx, maxx; length=7), digits=1),
         yticks = 0:10:40,
-        xlabel = "mpdop",
+        xlabel = "Valeur moyenne du PDOP (Grille $(length(grid_ga.lats))x$(length(grid_ga.lons)))",
         ylabel = "Pourcentage [%]",
-        title  = "Histogramme de PDOP ($iter itérations)",
+        title  = "Histogramme de PDOP ($(c.iter) itérations)",
         legend = false,
         grid = true,
         xminorgrid = true,
@@ -137,10 +179,10 @@ end
 
 # ╔═╡ c9caef05-beaa-4d48-a579-d706856c142f
 begin
-    covs = [c[1][3] for c in configs]
-    w4   = [c[2]    for c in configs]
+    covs = [c[1][3] for c in c.configs]
+    w4 = [c[2] for c in c.configs] /c.iter * 100
 
-    histogram(
+    h3 = histogram(
         covs;
         weights = w4,
         bins = 95:0.25:100,
@@ -148,9 +190,9 @@ begin
         ylims = (0, 50),
         xticks = (95:1:100, string.(95:1:100)),
         yticks = 0:10:50,
-        xlabel = "Couverture cov [%]",
+        xlabel = "Couverture cov [%] (Grille $(length(grid_ga.lats))x$(length(grid_ga.lons)))",
         ylabel = "Pourcentage [%]",
-        title  = "Histogramme de cov ($iter itérations)",
+        title  = "Histogramme de cov ($(c.iter) itérations)",
         legend = false,
         grid = true,
         xminorgrid = true,
@@ -215,8 +257,14 @@ end
 # ╠═4e855cd5-1b07-4b3d-8ad9-f0212260171c
 # ╠═d8440cd3-173e-4851-9142-909b9a18a470
 # ╠═b856ac29-3431-47cf-8d5f-8672e68dc0bb
+# ╠═1244e432-4ffa-4a9f-ad1e-7d8c99ebff9e
+# ╠═824a5fe3-0fb2-4a2c-a728-fa5b651f73d2
+# ╠═08cc6015-3a01-454a-9b33-87621f105f23
 # ╠═6427fe21-9de3-47ea-aaea-c6da4a67ff20
+# ╠═05bd2086-93a9-4b2f-bb22-fb3594e44f7c
+# ╠═fa9d0c80-b802-43cf-bb52-a4db3a3d73f3
 # ╟─6643807e-c239-4713-b13e-8b7472b30a73
+# ╟─62463c8e-693c-47ac-a343-82fb57955e89
 # ╟─929b36c0-0b12-4c5b-bbd1-2ec49d774bb8
 # ╟─c9caef05-beaa-4d48-a579-d706856c142f
 # ╠═b1369aca-0b51-4c68-a2d4-9d93f2249003
